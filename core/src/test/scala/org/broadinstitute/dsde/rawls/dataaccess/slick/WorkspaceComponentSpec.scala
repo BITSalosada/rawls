@@ -138,6 +138,11 @@ class WorkspaceComponentSpec extends TestDriverComponentWithFlatSpecAndMatchers 
       runAndWait(workspaceQuery.listSubmissionSummaryStats(Seq(wsIdSubmittedSubmission)))
     }
 
+    val wsIdInterleavedSubmissions: UUID = testData.workspaceInterleavedSubmissions
+    assertResult(Map(wsIdInterleavedSubmissions -> WorkspaceSubmissionStats(Option(testData.t4), Option(testData.t3), 0))) {
+      runAndWait(workspaceQuery.listSubmissionSummaryStats(Seq(wsIdInterleavedSubmissions)))
+    }
+
     // Note: a submission with both a successful and failed workflow is a failure
     val wsIdMixedSubmission: UUID = testData.workspaceMixedSubmissions
     assertResult(Map(wsIdMixedSubmission -> WorkspaceSubmissionStats(Some(testDate), Some(testDate), 1))) {
