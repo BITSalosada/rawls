@@ -2,6 +2,7 @@ package org.broadinstitute.dsde.rawls.webservice
 
 import akka.actor.{Actor, Props}
 import org.broadinstitute.dsde.rawls.genomics.GenomicsService
+import org.broadinstitute.dsde.rawls.metrics.InstrumentationDirectives
 import org.broadinstitute.dsde.rawls.model.{ApplicationVersion, UserInfo}
 import org.broadinstitute.dsde.rawls.openam.StandardUserInfoDirectives
 import org.broadinstitute.dsde.rawls.statistics.StatisticsService
@@ -28,18 +29,20 @@ object RawlsApiServiceActor {
 class RawlsApiServiceActor(val workspaceServiceConstructor: UserInfo => WorkspaceService, val userServiceConstructor: UserInfo => UserService, val genomicsServiceConstructor: UserInfo => GenomicsService, val statisticsServiceConstructor: UserInfo => StatisticsService, val statusServiceConstructor: () => StatusService, val appVersion: ApplicationVersion, val googleClientId: String, val submissionTimeout: FiniteDuration)(implicit val executionContext: ExecutionContext) extends Actor
   with RootRawlsApiService with WorkspaceApiService with EntityApiService with MethodConfigApiService with SubmissionApiService
   with AdminApiService with UserApiService with StandardUserInfoDirectives with BillingApiService with NotificationsApiService
-  with StatusApiService {
+  with StatusApiService with InstrumentationDirectives {
 
   def actorRefFactory = context
   def apiRoutes = options{ complete(OK) } ~ baseRoute ~ workspaceRoutes ~ entityRoutes ~ methodConfigRoutes ~ submissionRoutes ~ adminRoutes ~ userRoutes ~ billingRoutes ~ notificationsRoutes
   def registerRoutes = options{ complete(OK) } ~ createUserRoute ~ getUserStatusRoute
 
   def receive = runRoute(
-    swaggerRoute ~
-    versionRoute ~
-    statusRoute ~
-    pathPrefix("api") { apiRoutes } ~
-    pathPrefix("register") { registerRoutes }
+    instrumentRequestPath {
+      swaggerRoute ~
+        versionRoute ~
+        statusRoute ~
+        pathPrefix("api") { apiRoutes } ~
+        pathPrefix("register") { registerRoutes }
+    }
   )
 }
 

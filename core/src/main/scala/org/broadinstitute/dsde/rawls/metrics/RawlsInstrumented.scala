@@ -10,6 +10,7 @@ import slick.dbio.{DBIOAction, Effect, NoStream}
 
 import scala.annotation.implicitNotFound
 import scala.concurrent.ExecutionContext
+import spray.http.Uri.Path
 
 /**
   * Mixin trait for instrumentation.
@@ -22,6 +23,7 @@ trait RawlsInstrumented extends DefaultInstrumented {
   final val SubmissionMetric = "submission"
   final val SubmissionStatusMetric = "submissionStatus"
   final val WorkflowStatusMetric = "workflowStatus"
+  final val RequestPathMetric = "requestPath"
 
   /**
     * Base name for all metrics. This will be prepended to all generated metric names.
@@ -74,6 +76,10 @@ trait RawlsInstrumented extends DefaultInstrumented {
     *
     * Note the above will only compile if there are [[Expansion]] instances for the types passed to the expand method.
     */
+  implicit object PathExpansion extends Expansion[Path] {
+    override def makeName(key: String, p: Path): String = s"$key.${p.toString.replace('/', '.')}"
+  }
+
   protected class ExpandedMetricBuilder private (m: String = "") {
     def expand[A: Expansion](key: String, a: A) = {
       new ExpandedMetricBuilder(
