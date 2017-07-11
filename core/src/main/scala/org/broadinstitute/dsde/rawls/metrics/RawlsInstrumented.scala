@@ -183,6 +183,9 @@ trait RawlsInstrumented extends DefaultInstrumented {
   protected def httpRequestCounter(builder: ExpandedMetricBuilder): HttpRequest => Counter =
     httpRequest => builder.expand("request").expand(httpRequest.method).expand(httpRequest.uri).asCounter()
 
+  protected def httpRequestCounter2: HttpRequest => Counter =
+    httpRequest => ExpandedMetricBuilder.expand("request").expand(httpRequest.method).expand(httpRequest.uri).asCounter()
+
   protected def httpResponseCounter(builder: ExpandedMetricBuilder): HttpResponse => Counter =
     httpResponse => builder.expand("response").expand(httpResponse.status).asCounter()
 

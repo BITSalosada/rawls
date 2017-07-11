@@ -13,8 +13,7 @@ trait InstrumentationDirectives extends RawlsInstrumented {
   // TODO can I add timing here (Anu's story) - google "scala spray request timing"
 
   def instrumentRequestPath: Directive0 = requestInstance flatMap { request =>
-    val x = ExpandedMetricBuilder.expand("temp")
-    httpRequestCounter(x)(request).inc()
+    httpRequestCounter2(request).inc()
     pass
   }
 }
