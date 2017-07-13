@@ -61,5 +61,5 @@ trait StatsDTestUtils { this: MockitoSugar with Eventually with LazyLogging with
   protected def expectedAPICounterMetric(workspaceName: WorkspaceName, submissionId: String, expectedTimes: Int): (String, String) =
     (s"rawls.rawls.request.workspaces_${workspaceName.toString.replace('/', '_')}_submissions_${submissionId}", expectedTimes.toString)
 
-  protected def expectedAPITimerRateMetric(api,workspaceName: WorkspaceName, submissionId: String, )
+  //protected def expectedAPITimerRateMetric(api,workspaceName: WorkspaceName, submissionId: String, )
 }
