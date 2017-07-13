@@ -180,7 +180,7 @@ class SubmissionApiServiceSpec extends ApiServiceSpec with InstrumentationDirect
     } { capturedMetrics =>
       logger.info("abort submission: " + capturedMetrics.toString)
       capturedMetrics should contain (expectedAPICounterMetric(wsName, submissionId, 1))
-      capturedMetrics should contain ()
+      //capturedMetrics should contain ()
       capturedMetrics should contain (expectedSubmissionStatusMetric(wsName, SubmissionStatuses.Aborting, 1))
     }
 
