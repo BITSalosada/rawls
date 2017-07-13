@@ -2,13 +2,13 @@ package org.broadinstitute.dsde.rawls
 
 import java.util.concurrent.TimeUnit
 
-import com.codahale.metrics.SharedMetricRegistries
-import com.codahale.metrics.health.SharedHealthCheckRegistries
+import com.codahale.metrics.{MetricFilter, SharedMetricRegistries}
 import com.readytalk.metrics.{StatsD, StatsDReporter}
+import com.typesafe.scalalogging.LazyLogging
 import org.broadinstitute.dsde.rawls.model.SubmissionStatuses.SubmissionStatus
 import org.broadinstitute.dsde.rawls.model.WorkflowStatuses.WorkflowStatus
 import org.broadinstitute.dsde.rawls.model.{Submission, Workspace, WorkspaceName}
-import org.mockito.Mockito.{atLeastOnce, inOrder => mockitoInOrder}
+import org.mockito.Mockito.{atLeast => mokitoAtLeast, inOrder => mockitoInOrder}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.mock.MockitoSugar
 
@@ -18,12 +18,11 @@ import scala.concurrent.duration._
 /**
   * Created by rtitle on 6/29/17.
   */
-trait StatsDTestUtils { this: MockitoSugar with Eventually with RawlsTestUtils =>
+trait StatsDTestUtils { this: MockitoSugar with Eventually with LazyLogging with RawlsTestUtils =>
 
   protected def withStatsD[T](testCode: => T)(verify: Seq[(String, String)] => Unit = _ => ()): T = {
     val statsD = mock[StatsD]
-    SharedMetricRegistries.clear()
-    SharedHealthCheckRegistries.clear()
+    SharedMetricRegistries.getOrCreate("default").removeMatching(MetricFilter.ALL)
     val reporter = StatsDReporter.forRegistry(SharedMetricRegistries.getOrCreate("default"))
       .convertRatesTo(TimeUnit.SECONDS)
       .convertDurationsTo(TimeUnit.MILLISECONDS)
@@ -31,20 +30,19 @@ trait StatsDTestUtils { this: MockitoSugar with Eventually with RawlsTestUtils =
     reporter.start(1, TimeUnit.SECONDS)
     try {
       val result = testCode
-      eventually(timeout(10 seconds)) {
+      eventually(timeout(50 seconds)) {
         val order = mockitoInOrder(statsD)
         order.verify(statsD).connect()
         val metricCaptor = captor[String]
         val valueCaptor = captor[String]
-        order.verify(statsD, atLeastOnce).send(metricCaptor.capture, valueCaptor.capture)
+        order.verify(statsD, mokitoAtLeast(1)).send(metricCaptor.capture, valueCaptor.capture)
         order.verify(statsD).close()
         verify(metricCaptor.getAllValues.asScala.zip(valueCaptor.getAllValues.asScala))
       }
       result
     } finally {
       reporter.stop()
-      SharedMetricRegistries.clear()
-      SharedHealthCheckRegistries.clear()
+      SharedMetricRegistries.getOrCreate("default").removeMatching(MetricFilter.ALL)
     }
   }
 
@@ -59,4 +57,9 @@ trait StatsDTestUtils { this: MockitoSugar with Eventually with RawlsTestUtils =
 
   protected def expectedSubmissionStatusMetric(workspaceName: WorkspaceName, submissionStatus: SubmissionStatus, expectedTimes: Int): (String, String) =
     (s"test.workspace.${workspaceName.toString.replace('/', '.')}.submissionStatus.${submissionStatus.toString}", expectedTimes.toString)
+
+  protected def expectedAPICounterMetric(workspaceName: WorkspaceName, submissionId: String, expectedTimes: Int): (String, String) =
+    (s"rawls.rawls.request.workspaces_${workspaceName.toString.replace('/', '_')}_submissions_${submissionId}", expectedTimes.toString)
+
+  protected def expectedAPITimerRateMetric(api,workspaceName: WorkspaceName, submissionId: String, )
 }

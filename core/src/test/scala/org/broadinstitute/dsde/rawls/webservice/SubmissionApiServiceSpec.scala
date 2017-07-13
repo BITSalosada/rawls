@@ -7,6 +7,7 @@ import org.broadinstitute.dsde.rawls.dataaccess._
 import org.broadinstitute.dsde.rawls.dataaccess.slick.WorkflowAuditStatusRecord
 import org.broadinstitute.dsde.rawls.google.MockGooglePubSubDAO
 import org.broadinstitute.dsde.rawls.jobexec.WorkflowSubmissionActor
+import org.broadinstitute.dsde.rawls.metrics.InstrumentationDirectives
 import org.broadinstitute.dsde.rawls.model.ExecutionJsonSupport.{ExecutionServiceVersionFormat, SubmissionListResponseFormat, SubmissionReportFormat, SubmissionRequestFormat, SubmissionStatusResponseFormat, WorkflowOutputsFormat, WorkflowQueueStatusResponseFormat}
 import org.broadinstitute.dsde.rawls.model.WorkspaceJsonSupport._
 import org.broadinstitute.dsde.rawls.model._
@@ -23,7 +24,7 @@ import scala.concurrent.duration._
 /**
  * Created by dvoet on 4/24/15.
  */
-class SubmissionApiServiceSpec extends ApiServiceSpec {
+class SubmissionApiServiceSpec extends ApiServiceSpec with InstrumentationDirectives{
 
   case class TestApiService(dataSource: SlickDataSource, gcsDAO: MockGoogleServicesDAO, gpsDAO: MockGooglePubSubDAO)(implicit val executionContext: ExecutionContext) extends ApiServices with MockUserInfoDirectives
 
@@ -147,31 +148,39 @@ class SubmissionApiServiceSpec extends ApiServiceSpec {
             }
         }
     } { capturedMetrics =>
-      capturedMetrics should contain (expectedSubmissionStatusMetric(wsName, SubmissionStatuses.Submitted, 1))
+      capturedMetrics should contain (expectedSubmissionStatusMetric(wsName, SubmissionStatuses.Aborting, 3))
     }
 
     fail("Unable to create and monitor submissions")
   }
 
-  private def abortSubmission(services: TestApiService, wsName: WorkspaceName, submissionId: String, validate: Boolean = true): Unit = {
+  private def
+
+
+  abortSubmission(services: TestApiService, wsName: WorkspaceName, submissionId: String, validate: Boolean = true): Unit = {
     import driver.api._
     implicit val patienceConfig = PatienceConfig(timeout = scaled(Span(30, Seconds)))
 
     withStatsD {
+      logger.info("Attempting to abort")
       // Abort the submission
       Delete(s"${wsName.path}/submissions/${submissionId}") ~>
-        sealRoute(services.submissionRoutes) ~>
+        sealRoute(instrumentRequestPath{services.submissionRoutes}) ~>
         check {
           assertResult(StatusCodes.NoContent) {
             status
           }
         }
 
+      logger.info("we're checking if aborting")
       // The submission should be aborting
       assertResult(SubmissionStatuses.Aborting.toString) {
         runAndWait(submissionQuery.findById(UUID.fromString(submissionId)).result.head).status
       }
     } { capturedMetrics =>
+      logger.info("abort submission: " + capturedMetrics.toString)
+      capturedMetrics should contain (expectedAPICounterMetric(wsName, submissionId, 1))
+      capturedMetrics should contain ()
       capturedMetrics should contain (expectedSubmissionStatusMetric(wsName, SubmissionStatuses.Aborting, 1))
     }
 

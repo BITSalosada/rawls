@@ -6,6 +6,7 @@ import akka.actor._
 import akka.testkit.{TestActorRef, TestKit}
 import com.google.api.client.auth.oauth2.Credential
 import com.google.api.client.googleapis.testing.auth.oauth2.MockGoogleCredential.Builder
+import com.typesafe.scalalogging.LazyLogging
 import org.broadinstitute.dsde.rawls.dataaccess._
 import org.broadinstitute.dsde.rawls.dataaccess.slick.{TestDriverComponent, WorkflowRecord}
 import org.broadinstitute.dsde.rawls.jobexec.SubmissionMonitorActor.{ExecutionServiceStatusResponse, StatusCheckComplete}
@@ -23,7 +24,7 @@ import scala.util.{Success, Try}
 /**
  * Created by dvoet on 7/1/15.
  */
-class SubmissionMonitorSpec(_system: ActorSystem) extends TestKit(_system) with FlatSpecLike with Matchers with TestDriverComponent with BeforeAndAfterAll with Eventually with MockitoSugar with RawlsTestUtils with StatsDTestUtils {
+class SubmissionMonitorSpec(_system: ActorSystem) extends TestKit(_system) with FlatSpecLike with Matchers with TestDriverComponent with BeforeAndAfterAll with Eventually with MockitoSugar with RawlsTestUtils with StatsDTestUtils with LazyLogging {
   import driver.api._
 
   def this() = this(ActorSystem("WorkflowMonitorSpec"))

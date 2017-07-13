@@ -3,14 +3,11 @@ package org.broadinstitute.dsde.rawls.metrics
 import java.util.UUID
 
 import nl.grons.metrics.scala._
-import org.apache.http.HttpStatus
 import org.broadinstitute.dsde.rawls.model.SubmissionStatuses.SubmissionStatus
 import org.broadinstitute.dsde.rawls.model.Subsystems.Subsystem
 import org.broadinstitute.dsde.rawls.model.WorkflowStatuses.WorkflowStatus
-import org.broadinstitute.dsde.rawls.model.{Subsystems, WorkspaceName}
+import org.broadinstitute.dsde.rawls.model.WorkspaceName
 import slick.dbio.{DBIOAction, Effect, NoStream}
-import spray.http.Uri.Path
-import spray.http.Uri.Path.{Empty, Segment, Slash}
 import spray.http._
 
 import scala.annotation.implicitNotFound
@@ -181,16 +178,21 @@ trait RawlsInstrumented extends DefaultInstrumented {
       .asCounter()
 
   protected def httpRequestCounter(builder: ExpandedMetricBuilder): HttpRequest => Counter =
-    httpRequest => builder.expand("request").expand(httpRequest.method).expand(httpRequest.uri).asCounter()
+    httpRequest => builder
+      .expand("request", httpRequest.uri)
+      .asCounter()
 
-  protected def httpRequestCounter2: HttpRequest => Counter =
-    httpRequest => ExpandedMetricBuilder.expand("request").expand(httpRequest.method).expand(httpRequest.uri).asCounter()
+//  protected def httpRequestCounter2: HttpRequest => Counter =
+//    httpRequest => ExpandedMetricBuilder.expand("request").expand(httpRequest.method).expand(httpRequest.uri).asCounter()
 
   protected def httpResponseCounter(builder: ExpandedMetricBuilder): HttpResponse => Counter =
     httpResponse => builder.expand("response").expand(httpResponse.status).asCounter()
 
   protected def httpRequestTimer(builder: ExpandedMetricBuilder): HttpRequest => Timer =
     httpRequest => builder.expand("latency").expand(httpRequest.method).expand(httpRequest.uri).asTimer()
+
+  protected def httpRequestTimer2: HttpRequest => Timer =
+    httpRequest => ExpandedMetricBuilder.expand("latency").expand(httpRequest.method).expand(httpRequest.uri).asTimer()
 }
 
 object RawlsInstrumented {

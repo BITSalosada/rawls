@@ -1,7 +1,8 @@
 package org.broadinstitute.dsde.rawls.webservice
 
-import org.broadinstitute.dsde.rawls.model._
+import com.typesafe.scalalogging.LazyLogging
 import org.broadinstitute.dsde.rawls.model.ExecutionJsonSupport._
+import org.broadinstitute.dsde.rawls.model._
 import org.broadinstitute.dsde.rawls.openam.UserInfoDirectives
 import org.broadinstitute.dsde.rawls.workspace.WorkspaceService
 import spray.httpx.SprayJsonSupport._
@@ -13,7 +14,7 @@ import scala.concurrent.duration.FiniteDuration
 /**
  * Created by dvoet on 6/4/15.
  */
-trait SubmissionApiService extends HttpService with PerRequestCreator with UserInfoDirectives {
+trait SubmissionApiService extends HttpService with PerRequestCreator with UserInfoDirectives with LazyLogging {
   implicit val executionContext: ExecutionContext
 
   val workspaceServiceConstructor: UserInfo => WorkspaceService
@@ -59,8 +60,10 @@ trait SubmissionApiService extends HttpService with PerRequestCreator with UserI
     } ~
     path("workspaces" / Segment / Segment / "submissions" / Segment) { (workspaceNamespace, workspaceName, submissionId) =>
       delete {
-        requestContext => perRequest(requestContext, WorkspaceService.props(workspaceServiceConstructor, userInfo),
-          WorkspaceService.AbortSubmission(WorkspaceName(workspaceNamespace, workspaceName), submissionId))
+        requestContext => {
+          logger.info("we're in the abort API call")
+          perRequest(requestContext, WorkspaceService.props(workspaceServiceConstructor, userInfo), WorkspaceService.AbortSubmission(WorkspaceName(workspaceNamespace, workspaceName), submissionId))
+        }
       }
     } ~
       path("workspaces" / Segment / Segment / "submissions" / Segment / "workflows" / Segment ) { (workspaceNamespace, workspaceName, submissionId, workflowId) =>

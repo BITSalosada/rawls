@@ -20,6 +20,7 @@ import org.scalatest.{BeforeAndAfterAll, FlatSpecLike, Matchers}
 import spray.http.StatusCodes
 import spray.json.DefaultJsonProtocol._
 import spray.json._
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.Await
 import scala.concurrent.duration.{FiniteDuration, _}
@@ -27,7 +28,7 @@ import scala.concurrent.duration.{FiniteDuration, _}
 /**
  * Created by dvoet on 5/17/16.
  */
-class WorkflowSubmissionSpec(_system: ActorSystem) extends TestKit(_system) with FlatSpecLike with Matchers with TestDriverComponent with BeforeAndAfterAll with MockitoSugar with Eventually with RawlsTestUtils with StatsDTestUtils {
+class WorkflowSubmissionSpec(_system: ActorSystem) extends TestKit(_system) with FlatSpecLike with Matchers with TestDriverComponent with BeforeAndAfterAll with MockitoSugar with Eventually with RawlsTestUtils with StatsDTestUtils with LazyLogging {
   import driver.api._
 
   def this() = this(ActorSystem("WorkflowSubmissionSpec"))
@@ -185,6 +186,7 @@ class WorkflowSubmissionSpec(_system: ActorSystem) extends TestKit(_system) with
       }
     } { capturedMetrics =>
       // should be 2 submitted, 1 failed per the mock Cromwell server
+      logger.info("capturedMetrics:  "  +  capturedMetrics)
       capturedMetrics should contain (expectedWorkflowStatusMetric(testData.workspace, testData.submission1, WorkflowStatuses.Submitted, None, 2))
       capturedMetrics should contain (expectedWorkflowStatusMetric(testData.workspace, testData.submission1, WorkflowStatuses.Failed, None, 1))
     }
@@ -284,6 +286,7 @@ class WorkflowSubmissionSpec(_system: ActorSystem) extends TestKit(_system) with
         }, "Workflows that timeout on submission to Cromwell should be marked Failed")
       }
     } { capturedMetrics =>
+      logger.info(capturedMetrics.toString)
       capturedMetrics should contain (expectedWorkflowStatusMetric(testData.workspace, testData.submission1, WorkflowStatuses.Failed))
     }
   }
