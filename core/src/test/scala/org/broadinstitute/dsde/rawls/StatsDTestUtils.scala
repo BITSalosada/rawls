@@ -8,7 +8,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.broadinstitute.dsde.rawls.model.SubmissionStatuses.SubmissionStatus
 import org.broadinstitute.dsde.rawls.model.WorkflowStatuses.WorkflowStatus
 import org.broadinstitute.dsde.rawls.model.{Submission, Workspace, WorkspaceName}
-import org.mockito.Mockito.{atLeast => mokitoAtLeast, inOrder => mockitoInOrder}
+import org.mockito.Mockito.{atLeastOnce, inOrder => mockitoInOrder}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.mock.MockitoSugar
 
@@ -30,12 +30,12 @@ trait StatsDTestUtils { this: MockitoSugar with Eventually with LazyLogging with
     reporter.start(1, TimeUnit.SECONDS)
     try {
       val result = testCode
-      eventually(timeout(50 seconds)) {
+      eventually(timeout(10 seconds)) {
         val order = mockitoInOrder(statsD)
         order.verify(statsD).connect()
         val metricCaptor = captor[String]
         val valueCaptor = captor[String]
-        order.verify(statsD, mokitoAtLeast(1)).send(metricCaptor.capture, valueCaptor.capture)
+        order.verify(statsD, atLeastOnce).send(metricCaptor.capture, valueCaptor.capture)
         order.verify(statsD).close()
         verify(metricCaptor.getAllValues.asScala.zip(valueCaptor.getAllValues.asScala))
       }
