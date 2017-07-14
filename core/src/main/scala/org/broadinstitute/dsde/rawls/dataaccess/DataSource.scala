@@ -7,6 +7,7 @@ import _root_.slick.backend.DatabaseConfig
 import _root_.slick.driver.JdbcDriver
 import _root_.slick.jdbc.TransactionIsolation
 import _root_.slick.jdbc.meta.MTable
+import akka.actor.ActorSystem
 import com.google.common.base.Throwables
 import com.mysql.jdbc.MysqlErrorNumbers
 import com.typesafe.config.ConfigValueFactory
@@ -28,7 +29,7 @@ object DataSource {
   }
 }
 
-class SlickDataSource(val databaseConfig: DatabaseConfig[JdbcDriver])(implicit executionContext: ExecutionContext) extends LazyLogging with Retry {
+class SlickDataSource(val databaseConfig: DatabaseConfig[JdbcDriver])(implicit executionContext: ExecutionContext, implicit val system: ActorSystem) extends LazyLogging with Retry {
   val dataAccess = new DataAccessComponent(databaseConfig.driver, databaseConfig.config.getInt("batchSize"))
 
   val database = databaseConfig.db
@@ -66,7 +67,7 @@ class SlickDataSource(val databaseConfig: DatabaseConfig[JdbcDriver])(implicit e
   }
 
   def inTransactionWithRetry[T](f: (DataAccess) => ReadWriteAction[T], isolationLevel: TransactionIsolation = TransactionIsolation.RepeatableRead): Future[T] = {
-    retry(whenDeadlock) {
+    retry(whenDeadlock) { () =>
       Future(Await.result(database.run(f(dataAccess).transactionally.withTransactionIsolation(isolationLevel)), Duration.Inf))(actionExecutionContext)
     }
   }
