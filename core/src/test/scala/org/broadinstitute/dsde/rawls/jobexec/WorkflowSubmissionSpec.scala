@@ -145,7 +145,7 @@ class WorkflowSubmissionSpec(_system: ActorSystem) extends TestKit(_system) with
       assert(runAndWait(workflowQuery.findWorkflowByIds(workflowRecs.map(_.id)).result).forall(_.status == WorkflowStatuses.Launching.toString))
     } { capturedMetrics =>
       //capturedMetrics.size should be (1)
-      capturedMetrics(0) should equal (expectedWorkflowStatusMetric(testData.workspace, testData.submission1, WorkflowStatuses.Launching))
+      capturedMetrics should contain (expectedWorkflowStatusMetric(testData.workspace, testData.submission1, WorkflowStatuses.Launching))
     }
   }
 
