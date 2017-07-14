@@ -593,7 +593,7 @@ class UserService(protected val userInfo: UserInfo, val dataSource: SlickDataSou
   }
 
   private def createManagedGroupInternal(usersGroupRef: RawlsGroupRef, ownersGroupRef: RawlsGroupRef): Future[ManagedGroup] = {
-    dataSource.inTransaction { dataAccess =>
+    dataSource.inTransactionWithRetry { dataAccess =>
       val existingGroups = for {
         preexistingUsersGroup <- dataAccess.rawlsGroupQuery.load(usersGroupRef)
         preexistingOwnersGroup <- dataAccess.rawlsGroupQuery.load(ownersGroupRef)
@@ -744,7 +744,7 @@ class UserService(protected val userInfo: UserInfo, val dataSource: SlickDataSou
     // a rawls group and associated google group because we need to catch any FK constraint violations caused by
     // deleting the rawls groups and if there are any rollback the db delete and not remove google groups
     for {
-      groupEmailsToDelete <- dataSource.inTransaction { dataAccess =>
+      groupEmailsToDelete <- dataSource.inTransactionWithRetry { dataAccess =>
         withManagedGroupOwnerAccess(groupRef, RawlsUser(userInfo), dataAccess) { managedGroup =>
           DBIO.seq(
             dataAccess.managedGroupQuery.deleteManagedGroup(groupRef),

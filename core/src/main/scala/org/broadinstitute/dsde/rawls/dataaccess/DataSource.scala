@@ -1,26 +1,26 @@
 package org.broadinstitute.dsde.rawls.dataaccess
 
-import java.sql.SQLTimeoutException
-import java.util.concurrent.{Executors, ExecutorService}
+import java.sql.{SQLException, SQLTimeoutException}
+import java.util.concurrent.{ExecutorService, Executors}
 
 import _root_.slick.backend.DatabaseConfig
 import _root_.slick.driver.JdbcDriver
 import _root_.slick.jdbc.TransactionIsolation
 import _root_.slick.jdbc.meta.MTable
 import com.google.common.base.Throwables
+import com.mysql.jdbc.MysqlErrorNumbers
 import com.typesafe.config.ConfigValueFactory
 import com.typesafe.scalalogging.LazyLogging
-import org.broadinstitute.dsde.rawls.dataaccess.slick.{ReadWriteAction, DataAccess, DataAccessComponent}
+import org.broadinstitute.dsde.rawls.dataaccess.slick.{DataAccess, DataAccessComponent, ReadWriteAction}
 import sun.security.provider.certpath.SunCertPathBuilderException
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
-
 import org.broadinstitute.dsde.rawls.util.ScalaConfig._
-
 import liquibase.{Contexts, Liquibase}
 import liquibase.database.jvm.JdbcConnection
 import liquibase.resource.{ClassLoaderResourceAccessor, ResourceAccessor}
+import org.broadinstitute.dsde.rawls.util.Retry
 
 object DataSource {
   def apply(databaseConfig: DatabaseConfig[JdbcDriver])(implicit executionContext: ExecutionContext): SlickDataSource = {
@@ -28,7 +28,7 @@ object DataSource {
   }
 }
 
-class SlickDataSource(val databaseConfig: DatabaseConfig[JdbcDriver])(implicit executionContext: ExecutionContext) extends LazyLogging {
+class SlickDataSource(val databaseConfig: DatabaseConfig[JdbcDriver])(implicit executionContext: ExecutionContext) extends LazyLogging with Retry {
   val dataAccess = new DataAccessComponent(databaseConfig.driver, databaseConfig.config.getInt("batchSize"))
 
   val database = databaseConfig.db
@@ -63,6 +63,19 @@ class SlickDataSource(val databaseConfig: DatabaseConfig[JdbcDriver])(implicit e
   def inTransaction[T](f: (DataAccess) => ReadWriteAction[T], isolationLevel: TransactionIsolation = TransactionIsolation.RepeatableRead): Future[T] = {
     //database.run(f(dataAccess).transactionally) <-- https://github.com/slick/slick/issues/1274
     Future(Await.result(database.run(f(dataAccess).transactionally.withTransactionIsolation(isolationLevel)), Duration.Inf))(actionExecutionContext)
+  }
+
+  def inTransactionWithRetry[T](f: (DataAccess) => ReadWriteAction[T], isolationLevel: TransactionIsolation = TransactionIsolation.RepeatableRead): Future[T] = {
+    retry(whenDeadlock) {
+      Future(Await.result(database.run(f(dataAccess).transactionally.withTransactionIsolation(isolationLevel)), Duration.Inf))(actionExecutionContext)
+    }
+  }
+
+  private def whenDeadlock(t: Throwable): Boolean = {
+    t match {
+      case e: SQLException if e.getErrorCode == MysqlErrorNumbers.ER_LOCK_DEADLOCK => true
+      case _ => false
+    }
   }
 
   def initWithLiquibase(liquibaseChangeLog: String, parameters: Map[String, AnyRef]) = {
