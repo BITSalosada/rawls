@@ -24,12 +24,12 @@ import liquibase.resource.{ClassLoaderResourceAccessor, ResourceAccessor}
 import org.broadinstitute.dsde.rawls.util.Retry
 
 object DataSource {
-  def apply(databaseConfig: DatabaseConfig[JdbcDriver])(implicit executionContext: ExecutionContext): SlickDataSource = {
+  def apply(databaseConfig: DatabaseConfig[JdbcDriver])(implicit executionContext: ExecutionContext, system: ActorSystem): SlickDataSource = {
     new SlickDataSource(databaseConfig)
   }
 }
 
-class SlickDataSource(val databaseConfig: DatabaseConfig[JdbcDriver])(implicit executionContext: ExecutionContext, implicit val system: ActorSystem) extends LazyLogging with Retry {
+class SlickDataSource(val databaseConfig: DatabaseConfig[JdbcDriver])(implicit executionContext: ExecutionContext, val system: ActorSystem) extends LazyLogging with Retry {
   val dataAccess = new DataAccessComponent(databaseConfig.driver, databaseConfig.config.getInt("batchSize"))
 
   val database = databaseConfig.db
