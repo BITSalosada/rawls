@@ -2,6 +2,7 @@ package org.broadinstitute.dsde.rawls.dataaccess.slick
 
 import java.util.UUID
 
+import akka.actor.ActorSystem
 import com.mysql.jdbc.exceptions.jdbc4.MySQLTransactionRollbackException
 import com.typesafe.config.ConfigFactory
 import nl.grons.metrics.scala.{Counter, DefaultInstrumented}
@@ -36,7 +37,7 @@ object DbResource {
   private val liquibaseConf = ConfigFactory.load().getConfig("liquibase")
   private val liquibaseChangeLog = liquibaseConf.getString("changelog")
 
-  val dataSource = new SlickDataSource(config)(TestExecutionContext.testExecutionContext)
+  val dataSource = new SlickDataSource(config)(TestExecutionContext.testExecutionContext, ActorSystem("rawls"))
   dataSource.initWithLiquibase(liquibaseChangeLog, Map.empty)
 }
 
