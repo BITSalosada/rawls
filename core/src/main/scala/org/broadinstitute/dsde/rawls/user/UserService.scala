@@ -534,6 +534,7 @@ class UserService(protected val userInfo: UserInfo, val dataSource: SlickDataSou
   }
 
   private def createGroupInternal(groupRef: RawlsGroupRef, dataAccess: DataAccess): ReadWriteAction[RawlsGroup] = {
+    // TODO: DON'T DO GOOGLE STUFF IN A TRANSACTION!!!
     DBIO.from(gcsDAO.createGoogleGroup(groupRef)).flatMap { rawlsGroup =>
       dataAccess.rawlsGroupQuery.save(rawlsGroup)
     }

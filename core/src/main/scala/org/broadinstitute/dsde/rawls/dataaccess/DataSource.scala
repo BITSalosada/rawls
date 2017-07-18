@@ -67,12 +67,12 @@ class SlickDataSource(val databaseConfig: DatabaseConfig[JdbcDriver])(implicit e
   }
 
   def inTransactionWithRetry[T](f: (DataAccess) => ReadWriteAction[T], isolationLevel: TransactionIsolation = TransactionIsolation.RepeatableRead): Future[T] = {
-    retry(whenDeadlock) { () =>
+    retry(whenDeadlocked) { () =>
       Future(Await.result(database.run(f(dataAccess).transactionally.withTransactionIsolation(isolationLevel)), Duration.Inf))(actionExecutionContext)
     }
   }
 
-  private def whenDeadlock(t: Throwable): Boolean = {
+  private def whenDeadlocked(t: Throwable): Boolean = {
     t match {
       case e: SQLException if e.getErrorCode == MysqlErrorNumbers.ER_LOCK_DEADLOCK => true
       case _ => false
