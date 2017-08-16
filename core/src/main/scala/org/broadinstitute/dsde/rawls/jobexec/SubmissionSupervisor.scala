@@ -92,7 +92,7 @@ class SubmissionSupervisor(executionServiceCluster: ExecutionServiceCluster,
     }
 
     def thresholdFunc(cause: Throwable, count: Int): Unit = {
-      logger.error(s"error monitoring submission after $count times", cause)
+      //logger.error(s"error monitoring submission after $count times", cause)
     }
 
     new ThresholdOneForOneStrategy(thresholdLimit = 3)(alwaysRestart)(thresholdFunc)

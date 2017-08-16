@@ -10,7 +10,7 @@ import nl.grons.metrics.scala.Counter
 import org.broadinstitute.dsde.rawls.RawlsException
 import slick.jdbc.TransactionIsolation
 import org.broadinstitute.dsde.rawls.dataaccess._
-import org.broadinstitute.dsde.rawls.dataaccess.slick.{DataAccess, ReadAction, ReadWriteAction, WorkflowRecord}
+import org.broadinstitute.dsde.rawls.dataaccess.slick._
 import org.broadinstitute.dsde.rawls.expressions.{OutputExpression, ThisEntityTarget, WorkspaceTarget}
 import org.broadinstitute.dsde.rawls.jobexec.SubmissionMonitorActor._
 import org.broadinstitute.dsde.rawls.jobexec.SubmissionSupervisor.{CheckCurrentWorkflowStatusCounts, SaveCurrentWorkflowStatusCounts}
@@ -21,7 +21,7 @@ import org.broadinstitute.dsde.rawls.model._
 import org.broadinstitute.dsde.rawls.util.{FutureSupport, addJitter}
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
@@ -73,8 +73,18 @@ class SubmissionMonitorActor(val workspaceName: WorkspaceName,
                              override val workbenchMetricBaseName: String) extends Actor with SubmissionMonitor with LazyLogging {
   import context._
 
-
   override def preStart(): Unit = {
+    import datasource.dataAccess.driver.api._
+    def getFriendly = {
+      datasource.inTransaction { dataAccess =>
+        for {
+          sub <- dataAccess.submissionQuery.findById(submissionId).result.head
+          mc <- dataAccess.methodConfigurationQuery.findById(sub.methodConfigurationId).result.head
+        } yield (mc.name)
+      }
+    }
+    friendlyName = Await.result( getFriendly, Duration.Inf )
+
     super.preStart()
     scheduleNextMonitorPass
   }
@@ -98,7 +108,9 @@ class SubmissionMonitorActor(val workspaceName: WorkspaceName,
       logger.debug(s"check current workflow status counts for submission $submissionId")
       checkCurrentWorkflowStatusCounts(true) pipeTo parent
 
-    case Status.Failure(t) => throw t // an error happened in some future, let the supervisor handle it
+    case Status.Failure(t) =>
+      println(s"$friendlyName failed with ${t.getClass}")
+      throw t // an error happened in some future, let the supervisor handle it
   }
 
   private def scheduleNextMonitorPass: Cancellable = {
@@ -130,6 +142,8 @@ trait SubmissionMonitor extends FutureSupport with LazyLogging with RawlsInstrum
     submissionStatusCounter(workspaceMetricBuilder)
 
   import datasource.dataAccess.driver.api._
+
+  var friendlyName: String = ""
 
   /**
    * This function starts a monitoring pass
@@ -238,29 +252,31 @@ trait SubmissionMonitor extends FutureSupport with LazyLogging with RawlsInstrum
     // This is why it's important to attach the outputs before updating the status -- if you update the status to Successful first, and the attach
     // outputs fails, we'll stop querying for the workflow status and never attach the outputs.
     datasource.inTransaction ({ dataAccess =>
+      println(s"attaching ${workflowsWithOutputs.length} workflows for $friendlyName")
       handleOutputs(workflowsWithOutputs, dataAccess)
     }, TransactionIsolation.ReadCommitted) //This txn is read committed because it's highly deadlocky.
       .flatMap { _ =>
       // NEW TXN! Update statuses for workflows and submission.
       datasource.inTransaction { dataAccess =>
+          println(s"attachOutputs apparently worked for $friendlyName, updating workflows")
 
-        // Refetch workflows as some may have been marked as Failed by handleOutputs.
-        dataAccess.workflowQuery.findWorkflowByIds(workflowsWithStatuses.map(_.id)).result flatMap { updatedRecs =>
+          // Refetch workflows as some may have been marked as Failed by handleOutputs.
+          dataAccess.workflowQuery.findWorkflowByIds(workflowsWithStatuses.map(_.id)).result flatMap { updatedRecs =>
 
-          //New statuses according to the execution service.
-          val workflowIdToNewStatus = workflowsWithStatuses.map({ workflowRec => workflowRec.id -> workflowRec.status }).toMap
+            //New statuses according to the execution service.
+            val workflowIdToNewStatus = workflowsWithStatuses.map({ workflowRec => workflowRec.id -> workflowRec.status }).toMap
 
-          // No need to update statuses for any workflows that are in terminal statuses.
-          // Doing so would potentially overwrite them with the execution service status if they'd been marked as failed by attachOutputs.
-          val workflowsToUpdate = updatedRecs.filter(rec => !WorkflowStatuses.terminalStatuses.contains(WorkflowStatuses.withName(rec.status)))
-          val workflowsWithNewStatuses = workflowsToUpdate.map(rec => rec.copy(status = workflowIdToNewStatus(rec.id)))
+            // No need to update statuses for any workflows that are in terminal statuses.
+            // Doing so would potentially overwrite them with the execution service status if they'd been marked as failed by attachOutputs.
+            val workflowsToUpdate = updatedRecs.filter(rec => !WorkflowStatuses.terminalStatuses.contains(WorkflowStatuses.withName(rec.status)))
+            val workflowsWithNewStatuses = workflowsToUpdate.map(rec => rec.copy(status = workflowIdToNewStatus(rec.id)))
 
-          // to minimize database updates batch 1 update per workflow status
-          DBIO.sequence( workflowsWithNewStatuses.groupBy(_.status).map { case (status, recs) =>
+            // to minimize database updates batch 1 update per workflow status
+            DBIO.sequence(workflowsWithNewStatuses.groupBy(_.status).map { case (status, recs) =>
               dataAccess.workflowQuery.batchUpdateStatus(recs, WorkflowStatuses.withName(status))
-          })
+            })
 
-        } flatMap { _ =>
+          } flatMap { _ =>
           // update submission after workflows are updated
           updateSubmissionStatus(dataAccess) map { shouldStop: Boolean =>
             //return a message about whether our submission is done entirely
@@ -281,13 +297,22 @@ trait SubmissionMonitor extends FutureSupport with LazyLogging with RawlsInstrum
   def updateSubmissionStatus(dataAccess: DataAccess)(implicit executionContext: ExecutionContext): ReadWriteAction[Boolean] = {
     dataAccess.workflowQuery.listWorkflowRecsForSubmissionAndStatuses(submissionId, (WorkflowStatuses.queuedStatuses ++ WorkflowStatuses.runningStatuses):_*) flatMap { workflowRecs =>
       if (workflowRecs.isEmpty) {
-        dataAccess.submissionQuery.findById(submissionId).map(_.status).result.head.map { status =>
-          SubmissionStatuses.withName(status) match {
-            case SubmissionStatuses.Aborting => SubmissionStatuses.Aborted
-            case _ => SubmissionStatuses.Done
+        //dataAccess.submissionQuery.findById(submissionId).map(_.status).result.head.map { status =>
+        dataAccess.submissionQuery.findById(submissionId).result.head.flatMap { sub =>
+          val status = sub.status
+          val zzz = for {
+            mc <- dataAccess.methodConfigurationQuery.findById(sub.methodConfigurationId).result.head
+            wfs <- dataAccess.workflowQuery.listWorkflowRecsForSubmission(submissionId)
+          } yield (mc, wfs)
+          zzz map { case (mc: MethodConfigurationRecord, wfs: Seq[WorkflowRecord]) =>
+            val newStatus = SubmissionStatuses.withName(status) match {
+              case SubmissionStatuses.Aborting => SubmissionStatuses.Aborted
+              case _ => SubmissionStatuses.Done
+            }
+            println(s"submission ${mc.name} terminating to status $newStatus")
+            newStatus
           }
         } flatMap { newStatus =>
-          logger.debug(s"submission $submissionId terminating to status $newStatus")
           dataAccess.submissionQuery.updateStatus(submissionId, newStatus)
         } map(_ => true)
       } else {
@@ -376,6 +401,7 @@ trait SubmissionMonitor extends FutureSupport with LazyLogging with RawlsInstrum
     val entityAttributes = workflowOutputs.collect({ case (OutputExpression(ThisEntityTarget, attrName), attr) => (attrName, attr) })
     val workspaceAttributes = workflowOutputs.collect({ case (OutputExpression(WorkspaceTarget, attrName), attr) => (attrName, attr) })
 
+    println(s"updateEntityAndAttributes $friendlyName adding $entityAttributes to ${entity.name} ${entity.attributes}")
     val updatedEntity = if (entityAttributes.isEmpty) None else Option(entity.copy(attributes = entity.attributes ++ entityAttributes))
     val updatedWorkspace = if (workspaceAttributes.isEmpty) None else Option(workspace.copy(attributes = workspace.attributes ++ workspaceAttributes))
     

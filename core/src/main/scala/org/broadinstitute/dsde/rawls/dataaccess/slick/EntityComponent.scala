@@ -380,10 +380,16 @@ trait EntityComponent {
       }
     }
 
-    private def optimisticLockUpdate(originalRec: EntityRecord): ReadWriteAction[Int] = {
+    private def bees : String = "bees"
+
+    private def optimisticLockUpdate(originalRec: EntityRecord, beeses: String = bees ): ReadWriteAction[Int] = {
       findEntityByIdAndVersion(originalRec.id, originalRec.recordVersion) update originalRec.copy(recordVersion = originalRec.recordVersion + 1) map {
-        case 0 => throw new RawlsConcurrentModificationException(s"could not update $originalRec because its record version has changed")
-        case success => success
+        case 0 =>
+          println(s"CME ${originalRec.name} recVersion ${originalRec.recordVersion} mismatch")
+          throw new RawlsConcurrentModificationException(s"could not update $originalRec because its record version has changed")
+        case success =>
+          println(s"optimism achieved! ${originalRec.name} bumped to ${originalRec.recordVersion + 1}")
+          success
       }
     }
 
