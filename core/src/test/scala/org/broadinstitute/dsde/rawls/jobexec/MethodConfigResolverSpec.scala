@@ -170,6 +170,21 @@ class MethodConfigResolverSpec extends WordSpecLike with Matchers with TestDrive
         Map(sampleSet2.name -> Seq(SubmissionValidationValue(Some(AttributeValueEmptyList), None, intArrayName)))
     }
 
+    /*
+    "resolve non-optional arrays of arrays" in withConfigData {
+      val context = SlickWorkspaceContext(workspace)
+
+      val doubleArrayWdl = """workflow w {
+                             |  Array[Array[File]] in_arr
+                             |}"""
+
+      val configDoubleArray = MethodConfiguration("config_namespace", "configDoubleArray", "SampleSet",
+        Map.empty, Map("in_arr" -> AttributeString("this.nonexistent")), Map.empty, dummyMethod)
+
+      runAndWait(testResolveInputs(context, configEmptyArray, sampleSet2, arrayWdl, this)) shouldBe
+        Map(sampleSet2.name -> Seq(SubmissionValidationValue(Some(AttributeValueEmptyList), None, intArrayName)))
+    }*/
+
     "parse WDL" in withConfigData {
       val littleWorkflow = MethodConfigResolver.parseWDL(littleWdl).get
 

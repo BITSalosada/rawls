@@ -31,6 +31,18 @@ object MethodConfigResolver {
 
   private def getArrayResult(inputName: String, seq: Iterable[AttributeValue]): SubmissionValidationValue = {
     val notNull = seq.filter(v => v != null && v != AttributeNull)
+
+    /*
+    [ AttributeNumber(1), AttributeNumber(2), AttributeNumber(3) ] ==> AttributeValueList(AttributeNumber(1)... )
+
+
+    AttributeValueRawJson( " [[1,2,3], [3,4,5]]" ) ]
+    AttributeValueList( AttributeValueRawJson( [1,2,3] ), AttributeValueRawJson( [3,4,5] ) )
+
+    [  AttributeValueRawJson( " [[1,2,3], [3,4,5]]" ) ]
+    AttributeValueRawJson( " { key: val }  " )
+     */
+
     val attr = if (notNull.isEmpty) Option(AttributeValueEmptyList) else Option(AttributeValueList(notNull.toSeq))
     SubmissionValidationValue(attr, None, inputName)
   }

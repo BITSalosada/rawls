@@ -368,6 +368,10 @@ class ExpressionParserTest extends FunSuite with TestDriverComponent {
       assertResult(Map("sset1" -> TrySuccess(List(AttributeValueRawJson("{\"foo\":\"bar\"}"))))) {
         runAndWait(evalFinalAttribute(workspaceContext, "SampleSet", "sset1", "{\"foo\":\"bar\"}"))
       }
+
+      assertResult(Map("sset1" -> TrySuccess(List(AttributeValueRawJson("""[[0,1,2],[3,4,5]]"""))))) {
+        runAndWait(evalFinalAttribute(workspaceContext, "SampleSet", "sset1", """[[0,1,2],[3,4,5]]"""))
+      }
     }
   }
 
