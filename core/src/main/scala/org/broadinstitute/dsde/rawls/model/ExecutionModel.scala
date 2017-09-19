@@ -119,9 +119,10 @@ case class SubmissionStatusResponse(
   submissionEntity: AttributeEntityReference,
   workflows: Seq[Workflow],
   status: SubmissionStatus,
+  callCache: Boolean,
   workflowFailureMode: Option[WorkflowFailureMode] = None
 ) {
-  def this(submission: Submission, rawlsUser: RawlsUser) = this(submission.submissionId, submission.submissionDate, rawlsUser.userEmail.value, submission.methodConfigurationNamespace, submission.methodConfigurationName, submission.submissionEntity, submission.workflows, submission.status, submission.workflowFailureMode)
+  def this(submission: Submission, rawlsUser: RawlsUser) = this(submission.submissionId, submission.submissionDate, rawlsUser.userEmail.value, submission.methodConfigurationNamespace, submission.methodConfigurationName, submission.submissionEntity, submission.workflows, submission.status, submission.useCallCache, submission.workflowFailureMode)
 }
 
 case class SubmissionListResponse(
@@ -305,7 +306,7 @@ class ExecutionJsonSupport extends JsonSupport {
 
   implicit val SubmissionReportFormat = jsonFormat7(SubmissionReport)
 
-  implicit val SubmissionStatusResponseFormat = jsonFormat9(SubmissionStatusResponse)
+  implicit val SubmissionStatusResponseFormat = jsonFormat10(SubmissionStatusResponse)
 
   implicit val SubmissionListResponseFormat = jsonFormat10(SubmissionListResponse)
 
