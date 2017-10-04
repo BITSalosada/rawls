@@ -217,8 +217,10 @@ class WorkspaceService(protected val userInfo: UserInfo, val dataSource: SlickDa
     dataSource.inTransaction { dataAccess =>
       withWorkspaceContext(workspaceName, dataAccess) { workspaceContext =>
         getMaximumAccessLevel(RawlsUser(userInfo), workspaceContext, dataAccess) flatMap { accessLevel =>
-          if (accessLevel < WorkspaceAccessLevels.Read)
+          if (accessLevel < WorkspaceAccessLevels.Read) {
+            logger.info(s"Denied read access to $workspaceName for ${userInfo.userEmail} because max access level is only $accessLevel")
             DBIO.failed(new RawlsExceptionWithErrorReport(errorReport = ErrorReport(StatusCodes.NotFound, noSuchWorkspaceMessage(workspaceName))))
+          }
           else {
             for {
               catalog <- getUserCatalogPermissions(workspaceContext, dataAccess)
