@@ -68,6 +68,11 @@ private[expressions] class SlickExpressionEvaluator protected (val parser: DataA
     parser.parseAttributeExpr(expression) match {
       case Failure(regret) => DBIO.failed(new RawlsException(regret.getMessage))
       case Success(pipelineQuery) =>
+
+          //FIXME: it'd be much better if exprResults was Map[String, Map[String, AttributeValue] where the two strings are the root entity name
+          // and the final entity name. Then we don't have to guess whether Iterable[AttributeValue] is a list-of-one or a scalar.
+        //FIXME: OKAY THIS IS THE FIX!!!
+
         runPipe(SlickExpressionContext(workspaceContext, rootEntities, transactionId), pipelineQuery) map { (exprResults: Map[String, Iterable[Attribute]]) =>
           val results: Map[String, Try[Attribute]] = exprResults map { case (key: String, attrVals: Iterable[Attribute]) =>
             //In the case of this.participants.boo, attrVals might be [ [1,2,3], [4,5,6], "bees" ] if the participants have different types on "boo"

@@ -36,7 +36,7 @@ object MethodConfigResolver {
     val arrayResult = attr match {
       case AttributeValueEmptyList => AttributeValueEmptyList
       case avl: AttributeValueList => avl
-      case arj: AttributeValueRawJson if arj.isSecretlyArray => arj
+//      case arj: AttributeValueRawJson if arj.isSecretlyArray => arj //FIXME should i have commented this out?
 
       //upcast singles into lists
       case AttributeNull => AttributeValueEmptyList
