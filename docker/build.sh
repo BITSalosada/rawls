@@ -16,8 +16,8 @@ PROJECT=rawls
 function make_jar()
 {
     echo "building jar..."
-    bash ./docker/run-mysql.sh start
-    bash ./docker/run-opendj.sh start
+#    bash ./docker/run-mysql.sh start
+#    bash ./docker/run-opendj.sh start
 
     # Get the last commit hash of the model directory and set it as an environment variable
     GIT_MODEL_HASH=$(git log -n 1 --pretty=format:%h model)
@@ -27,13 +27,13 @@ function make_jar()
     EXIT_CODE=$?
 
     # stop mysql and opendj
-    bash ./docker/run-mysql.sh stop
-    bash ./docker/run-opendj.sh stop
+#    bash ./docker/run-mysql.sh stop
+#    bash ./docker/run-opendj.sh stop
 
     # if tests were a fail, fail script
-    if [ $EXIT_CODE != 0 ]; then
-        exit $EXIT_CODE
-    fi
+#    if [ $EXIT_CODE != 0 ]; then
+#        exit $EXIT_CODE
+#    fi
 }
 
 function artifactory_push()
