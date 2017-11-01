@@ -65,7 +65,7 @@ object BootMonitors extends LazyLogging {
       util.toScalaDuration(submissionMonitorConfig.getDuration("submissionPollInterval")),
       submissionMonitorConfig.getBoolean("trackDetailedSubmissionMetrics"),
       workbenchMetricBaseName = metricsPrefix
-    ).withDispatcher("submission-monitor-dispatcher"), "rawls-submission-supervisor")
+    ), "rawls-submission-supervisor")
   }
 
   private def startWorkflowSubmissionActors(system: ActorSystem, conf: Config, slickDataSource: SlickDataSource, gcsDAO: HttpGoogleServicesDAO, methodRepoDAO: MethodRepoDAO, shardedExecutionServiceCluster: ExecutionServiceCluster, maxActiveWorkflowsTotal: Int, maxActiveWorkflowsPerUser: Int, metricsPrefix: String) = {
