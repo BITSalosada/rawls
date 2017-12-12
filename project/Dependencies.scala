@@ -1,7 +1,7 @@
 import sbt._
 
 object Dependencies {
-  val akkaV = "2.3.6"
+  val akkaV = "2.4.19"
   val sprayV = "1.3.4"
   val olderSprayV = "1.3.3" // "latest" is different for various spray packages
   val slickV = "3.1.1"
