@@ -11,6 +11,7 @@ object Merging {
     case "application.conf" => MergeStrategy.first
     case "logback.xml" => MergeStrategy.first
     case "cobertura.properties" => MergeStrategy.discard
+    case "version.conf" => MergeStrategy.discard
     case "overview.html" => MergeStrategy.first
     case x => oldStrategy(x)
   }
