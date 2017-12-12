@@ -71,14 +71,12 @@ object Testing {
     validDirectoryUrlSetting,
     validDirectoryPasswordSetting,
 
-    (test in Test) <<= (test in Test) dependsOn(validDirectoryUrl, validDirectoryPassword),
-    (testOnly in Test) <<= (testOnly in Test) dependsOn(validDirectoryUrl, validDirectoryPassword),
-    (test in Test) <<= (test in Test) dependsOn validMySqlHost,
-    (testOnly in Test) <<= (testOnly in Test) dependsOn validMySqlHost,
+    (test in Test) := (test in Test) dependsOn(validDirectoryUrl, validDirectoryPassword),
+    (testOnly in Test) := (testOnly in Test) dependsOn(validDirectoryUrl, validDirectoryPassword),
+    (test in Test) := (test in Test) dependsOn validMySqlHost,
+    (testOnly in Test) := (testOnly in Test) dependsOn validMySqlHost,
 
     parallelExecution in Test := false
-
-
   )
 
   implicit class ProjectTestSettings(val project: Project) extends AnyVal {
