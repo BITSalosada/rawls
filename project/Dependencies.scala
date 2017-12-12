@@ -66,7 +66,8 @@ object Dependencies {
 
   val wdl4s: ModuleID = ("org.broadinstitute" %% "wdl4s" % wdl4sV
     exclude("org.typelevel", "cats_2.11")
-    exclude("io.spray", "spray-json_2.11"))
+    exclude("io.spray", "spray-json_2.11")
+    exclude("com.typesafe.scala-logging", "scala-logging_2.11"))
 
   val metricsDependencies = Seq(
     metricsScala,
