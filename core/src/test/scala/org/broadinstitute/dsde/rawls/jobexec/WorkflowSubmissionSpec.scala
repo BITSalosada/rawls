@@ -75,7 +75,7 @@ class WorkflowSubmissionSpec(_system: ActorSystem) extends TestKit(_system) with
   }
 
   override def afterAll(): Unit = {
-    system.shutdown()
+    system.terminate()
     mockServer.stopServer
     super.afterAll()
   }

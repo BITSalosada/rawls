@@ -222,10 +222,10 @@ object Boot extends App with LazyLogging {
     (IO(Http) ? Http.Bind(service, interface = "0.0.0.0", port = 8080)).onComplete {
       case Success(Http.CommandFailed(failure)) =>
         system.log.error("could not bind to port: " + failure.toString)
-        system.shutdown()
+        system.terminate()
       case Failure(t) =>
         system.log.error(t, "could not bind to port")
-        system.shutdown()
+        system.terminate()
       case _ =>
     }
   }
