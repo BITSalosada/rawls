@@ -11,6 +11,8 @@ object Dependencies {
 
   val wdl4sV = "0.15-814d203"
 
+  val catsVersion = "1.0.0-MF"
+
   def excludeGuavaJDK5(m: ModuleID): ModuleID = m.exclude("com.google.guava", "guava-jdk5")
 
   val sprayJson: ModuleID =     "io.spray" %% "spray-json"    % olderSprayV
@@ -42,6 +44,10 @@ object Dependencies {
   val googleGuava: ModuleID =             "com.google.guava"  % "guava" % "19.0"
   val googleRpc: ModuleID =               "io.grpc" % "grpc-core" % "1.5.0"
 
+  val catsCore: ModuleID =    "org.typelevel" %% "cats-core"    % catsVersion
+  val catsKernel: ModuleID =  "org.typelevel" %% "cats-kernel"  % catsVersion
+  val catsMacros: ModuleID =  "org.typelevel" %% "cats-macros"  % catsVersion
+
   // metrics-scala transitively pulls in io.dropwizard.metrics:metrics-core
   val metricsScala: ModuleID =       "nl.grons"              %% "metrics-scala"    % "3.5.6"
   val metricsStatsd: ModuleID =      "com.readytalk"         %  "metrics3-statsd"  % "4.2.0"
@@ -55,7 +61,6 @@ object Dependencies {
   val swaggerUI: ModuleID =       "org.webjars"                   % "swagger-ui"            % "2.2.5"
   val commonsJEXL: ModuleID =     "org.apache.commons"            % "commons-jexl"          % "2.1.1"
   val httpClient: ModuleID =      "org.apache.httpcomponents"     % "httpclient"            % "4.5.3"  // upgrading a transitive dependency to avoid security warnings
-  val cats: ModuleID =            "org.typelevel"                 %% "cats"                 % "0.9.0"
   val parserCombinators =         "org.scala-lang.modules"        %% "scala-parser-combinators" % "1.0.6"
   val mysqlConnector: ModuleID =  "mysql"                         % "mysql-connector-java"  % "5.1.42"
   val liquibaseCore: ModuleID =   "org.liquibase"                 % "liquibase-core"        % "3.5.3"
@@ -100,7 +105,9 @@ object Dependencies {
   val utilDependencies = Seq(
     scalaLogging,
     akkaActor,
-    cats,
+    catsCore,
+    catsKernel,
+    catsMacros,
     akkaTestkit,
     scalatest,
     mockito
@@ -132,7 +139,9 @@ object Dependencies {
     swaggerUI,
     commonsJEXL,
     wdl4s,
-    cats,
+    catsCore,
+    catsKernel,
+    catsMacros,
     mysqlConnector,
     liquibaseCore,
     logbackClassic,
