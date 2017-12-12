@@ -12,6 +12,8 @@ object Dependencies {
 
   val cromwellVersion = "31-39223b8"
 
+  val catsVersion = "1.0.0-MF"
+
   def excludeGuavaJDK5(m: ModuleID): ModuleID = m.exclude("com.google.guava", "guava-jdk5")
 
   val slick: ModuleID =         "com.typesafe.slick" %% "slick"           % slickV
@@ -44,6 +46,10 @@ object Dependencies {
   val googleRpc: ModuleID =               "io.grpc" % "grpc-core" % "1.5.0"
   val googleOAuth2too: ModuleID = "com.google.auth" % "google-auth-library-oauth2-http" % "0.9.0"
 
+  val catsCore: ModuleID =    "org.typelevel" %% "cats-core"    % catsVersion
+  val catsKernel: ModuleID =  "org.typelevel" %% "cats-kernel"  % catsVersion
+  val catsMacros: ModuleID =  "org.typelevel" %% "cats-macros"  % catsVersion
+
   // metrics-scala transitively pulls in io.dropwizard.metrics:metrics-core
   val metricsScala: ModuleID =       "nl.grons"              %% "metrics-scala"    % "3.5.6"
   val metricsStatsd: ModuleID =      "com.readytalk"         %  "metrics3-statsd"  % "4.2.0"
@@ -57,7 +63,6 @@ object Dependencies {
   val swaggerUI: ModuleID =       "org.webjars"                   % "swagger-ui"            % "2.2.5"
   val commonsJEXL: ModuleID =     "org.apache.commons"            % "commons-jexl"          % "2.1.1"
   val httpClient: ModuleID =      "org.apache.httpcomponents"     % "httpclient"            % "4.5.3"  // upgrading a transitive dependency to avoid security warnings
-  val cats: ModuleID =            "org.typelevel"                 %% "cats"                 % "0.9.0"
   val parserCombinators =         "org.scala-lang.modules"        %% "scala-parser-combinators" % "1.0.6"
   val mysqlConnector: ModuleID =  "mysql"                         % "mysql-connector-java"  % "5.1.42"
   val liquibaseCore: ModuleID =   "org.liquibase"                 % "liquibase-core"        % "3.5.3"
@@ -116,8 +121,10 @@ object Dependencies {
   val utilDependencies = Seq(
     scalaLogging,
     akkaActor,
-    cats,
     akkaHttpTestKit,
+    catsCore,
+    catsKernel,
+    catsMacros,
     scalatest,
     mockito
   )
@@ -147,7 +154,9 @@ object Dependencies {
     swaggerUI,
     commonsJEXL,
     cromwellWdl,
-    cats,
+    catsCore,
+    catsKernel,
+    catsMacros,
     mysqlConnector,
     liquibaseCore,
     logbackClassic,
