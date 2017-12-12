@@ -81,7 +81,8 @@ object Dependencies {
     exclude("io.spray", "spray-json_2.12")
     exclude("io.spray", "akka-parsing_2.12")
     exclude("io.spray", "akka-stream_2.12")
-    exclude("com.typesafe.akka", "akka-actor_2.12"))
+    exclude("com.typesafe.akka", "akka-actor_2.12")
+    exclude("com.typesafe.netty", "netty-reactive-streams"))
 
   val workbenchModelV  = "0.10-6800f3a"
   val workbenchModel: ModuleID = "org.broadinstitute.dsde.workbench" %% "workbench-model"  % workbenchModelV
