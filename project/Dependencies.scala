@@ -77,6 +77,7 @@ object Dependencies {
     exclude("org.typelevel", "cats_2.11")
     exclude("io.spray", "spray-json_2.11")
     exclude("com.typesafe.scala-logging", "scala-logging_2.11")
+    exclude("io.circe", "circe-core_2.11")
     exclude("org.typelevel", "cats_2.12")
     exclude("io.spray", "spray-json_2.12")
     exclude("io.spray", "akka-parsing_2.12")
