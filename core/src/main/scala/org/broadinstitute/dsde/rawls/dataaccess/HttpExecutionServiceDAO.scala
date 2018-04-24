@@ -67,22 +67,13 @@ class HttpExecutionServiceDAO(executionServiceURL: String, override val workbenc
     // expand subworkflows and only return this set of keys
     // TODO?  A specialized Cromwell endpoint that selects these.  We currently do this for status, and perhaps others.
 
-    val metadataQueryParams =
-      """
-        |?expandSubWorkflows=true\
-        |&includeKey=calls\
-        |&includeKey=id\
-        |&includeKey=status\
-        |&includeKey=submission\
-        |&includeKey=start\
-        |&includeKey=end\
-        |&includeKey=failures\
-        |&includeKey=submittedFiles\
-        |&includeKey=inputs\
-        |&includeKey=outputs
-      """.stripMargin
+    val keysToInclude: Set[String] = Set(
+      "calls", "id", "status", "submission", "start", "end", "failures", "submittedFiles", "inputs", "outputs"
+    )
 
-    val url = s"$executionServiceURL/api/workflows/v1/$id/metadata$metadataQueryParams"
+    val metadataQueryParams = Set("expandSubWorkflows=true") ++ keysToInclude map { k => s"includeKey=$k" }
+
+    val url = s"$executionServiceURL/api/workflows/v1/$id/metadata?${metadataQueryParams mkString "&"}"
     retry(when500) { () => pipeline[JsObject](userInfo) apply Get(url) }
   }
 
