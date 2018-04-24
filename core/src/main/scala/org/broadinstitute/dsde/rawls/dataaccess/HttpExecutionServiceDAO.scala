@@ -64,7 +64,25 @@ class HttpExecutionServiceDAO(executionServiceURL: String, override val workbenc
     // val url = executionServiceURL + s"/api/workflows/v1/${id}/metadata?expandSubWorkflows=true"
     // but this was returning too much data.  Reverting temporarily until we have a better solution in GAWB-3378
 
-    val url = executionServiceURL + s"/api/workflows/v1/${id}/metadata"
+    // expand subworkflows and only return this set of keys
+    // TODO?  A specialized Cromwell endpoint that selects these.  We currently do this for status, and perhaps others.
+
+    val metadataQueryParams =
+      """
+        |?expandSubWorkflows=true\
+        |&includeKey=calls\
+        |&includeKey=id\
+        |&includeKey=status\
+        |&includeKey=submission\
+        |&includeKey=start\
+        |&includeKey=end\
+        |&includeKey=failures\
+        |&includeKey=submittedFiles\
+        |&includeKey=inputs\
+        |&includeKey=outputs
+      """.stripMargin
+
+    val url = s"$executionServiceURL/api/workflows/v1/$id/metadata$metadataQueryParams"
     retry(when500) { () => pipeline[JsObject](userInfo) apply Get(url) }
   }
 
