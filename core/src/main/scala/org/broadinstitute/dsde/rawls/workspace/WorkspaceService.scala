@@ -355,9 +355,11 @@ class WorkspaceService(protected val userInfo: UserInfo, val dataSource: SlickDa
     val rawPairs = for {
       groups <- dataAccess.rawlsGroupQuery.listGroupsForUser(user)
       pairs <- dataAccess.workspaceQuery.listPermissionPairsForGroups(groups)
-    } yield pairs
+    } yield (groups, pairs)
 
-    rawPairs.map { pairs =>
+    rawPairs.map { case (groups, pairs) =>
+      println(s"groups: ${groups.mkString(",")}")
+      println(s"pairs: ${pairs.mkString(",")}")
       pairs.groupBy(_.workspaceId).map { case (workspaceId, pairsInWorkspace) =>
         pairsInWorkspace.reduce((a, b) => WorkspacePermissionsPair(workspaceId, WorkspaceAccessLevels.max(a.accessLevel, b.accessLevel)))
       }.toSeq
