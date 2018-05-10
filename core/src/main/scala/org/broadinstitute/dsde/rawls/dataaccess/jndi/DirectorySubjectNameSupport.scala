@@ -48,7 +48,10 @@ trait DirectorySubjectNameSupport {
       case groupMatcher(cn) => Option(Left(RawlsGroupName(cn)))
       case personMatcher(uid) => Option(Right(RawlsUserSubjectId(uid)))
       case policyMatcher(policyName, resourceId, resourceTypeName) => Option(Left(RawlsGroupName(policyGroupName(resourceTypeName, resourceId, policyName))))
-      case _ => None
+      case _ => {
+        println(s"dnToSubject dropped: ${dn}")
+        None
+      }
     }
   }
 
