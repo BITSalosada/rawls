@@ -592,6 +592,7 @@ class UserService(protected val userInfo: UserInfo, val dataSource: SlickDataSou
   }
 
   private def findAndUpdateIntersectionGroups(groupRef: RawlsGroupRef): Future[Iterable[RawlsGroupRef]] = {
+    println(s"findAndUpdateIntersectionGroups called with ${groupRef}")
     for {
       intersectionGroups <- dataSource.inTransaction ({ dataAccess =>
         for {

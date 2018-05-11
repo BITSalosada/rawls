@@ -155,6 +155,10 @@ trait JndiDirectoryDAO extends DirectorySubjectNameSupport with JndiSupport {
           val myAttrs = new BasicAttributes(true) // Case ignore
 
           addMemberAttributes(group.users, group.subGroups, myAttrs) { _.put(new BasicAttribute(Attr.member)) } // add attribute with no value when no member present
+          
+          println(s"save: attrs are ${myAttrs}")
+          println(s"save: groupDn is ${groupDn(group.groupName)}")
+
           myAttrs.put(new BasicAttribute(Attr.groupUpdatedTimestamp, dateFormat.format(new Date())))
           ctx.modifyAttributes(groupDn(group.groupName), DirContext.REPLACE_ATTRIBUTE, myAttrs)
       }

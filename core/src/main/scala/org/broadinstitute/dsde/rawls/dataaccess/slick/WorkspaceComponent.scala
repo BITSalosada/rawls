@@ -726,6 +726,7 @@ trait WorkspaceComponent {
      * @return
      */
     def findAssociatedGroupsToIntersect(group: RawlsGroupRef): ReadWriteAction[Seq[GroupsToIntersect]] = {
+      println(s"findAssociatedGroupsToIntersect called with ${group}")
       def findWorkspacesForGroups(groups: Set[RawlsGroupName]) = {
         for {
           workspaceAccess <- workspaceAccessQuery if workspaceAccess.groupName.inSetBind(groups.map(_.value)) && workspaceAccess.isAuthDomainAcl === false
