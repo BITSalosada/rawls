@@ -94,30 +94,6 @@ class HttpGoogleServicesDAO(
   val billingScopes = Seq("https://www.googleapis.com/auth/cloud-billing")
 
   var httpTransport = GoogleNetHttpTransport.newTrustedTransport
-  // val httpTransport = new NetHttpTransport {
-  //   override def buildRequest(method: String, url: String): LowLevelHttpRequest = new MockLowLevelHttpRequest() {
-  //       override def execute(): LowLevelHttpResponse = {
-  //         super.execute()
-  //       }
-  //     }
-  // }.Builder().trustCertificates(GoogleUtils.getCertificateTrustStore()).build()
-  // val httpTransport: HttpTransport = new MockHttpTransport() {
-  //   override def buildRequest(method: String, url: String): LowLevelHttpRequest =
-  //     new MockLowLevelHttpRequest() {
-  //       override def execute(): LowLevelHttpResponse = {
-  //         val requestFactory = GoogleNetHttpTransport.newCompatibleTransport().createRequestFactory(); 
-  //         val request = requestFactory.buildRequest(method, new GenericUrl(url), null);
-  //         println(request.execute().parseAsString())
-
-  //         var response: MockLowLevelHttpResponse = new MockLowLevelHttpResponse()
-  //         response.addHeader("custom_header", "value")
-  //         response.setStatusCode(403)
-  //         response.setContentType(Json.MEDIA_TYPE)
-  //         response.setContent("{\"error\":\"not found\"}")
-  //         response
-  //       }
-  //     }
-  // }
   val jsonFactory = JacksonFactory.getDefaultInstance
   val tokenClientSecrets: GoogleClientSecrets = GoogleClientSecrets.load(jsonFactory, new StringReader(tokenClientSecretsJson))
   val tokenBucketName = "tokens-" + clientSecrets.getDetails.getClientId.stripSuffix(".apps.googleusercontent.com")
