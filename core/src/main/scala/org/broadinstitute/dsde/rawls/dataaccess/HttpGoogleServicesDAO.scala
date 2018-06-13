@@ -12,6 +12,12 @@ import akka.stream.Materializer
 import com.google.api.client.auth.oauth2.{Credential, TokenResponse}
 import com.google.api.client.googleapis.auth.oauth2.{GoogleClientSecrets, GoogleCredential}
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
+import com.google.api.client.testing.http.{HttpTesting, MockHttpTransport, MockLowLevelHttpRequest, MockLowLevelHttpResponse}
+import com.google.api.client.googleapis.GoogleUtils
+import com.google.api.client.http.javanet.NetHttpTransport
+import com.google.api.client.http.{HttpTransport, HttpRequestFactory, GenericUrl, HttpRequestInitializer, HttpRequest, HttpExecuteInterceptor}
+import com.google.api.client.json.Json
+import com.google.api.client.http.{LowLevelHttpRequest, LowLevelHttpResponse}
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.client.http.{HttpResponseException, InputStreamContent}
 import com.google.api.client.json.jackson2.JacksonFactory
@@ -87,7 +93,31 @@ class HttpGoogleServicesDAO(
   val genomicsScopes = Seq(GenomicsScopes.GENOMICS) // google requires GENOMICS, not just GENOMICS_READONLY, even though we're only doing reads
   val billingScopes = Seq("https://www.googleapis.com/auth/cloud-billing")
 
-  val httpTransport = GoogleNetHttpTransport.newTrustedTransport
+  var httpTransport = GoogleNetHttpTransport.newTrustedTransport
+  // val httpTransport = new NetHttpTransport {
+  //   override def buildRequest(method: String, url: String): LowLevelHttpRequest = new MockLowLevelHttpRequest() {
+  //       override def execute(): LowLevelHttpResponse = {
+  //         super.execute()
+  //       }
+  //     }
+  // }.Builder().trustCertificates(GoogleUtils.getCertificateTrustStore()).build()
+  // val httpTransport: HttpTransport = new MockHttpTransport() {
+  //   override def buildRequest(method: String, url: String): LowLevelHttpRequest =
+  //     new MockLowLevelHttpRequest() {
+  //       override def execute(): LowLevelHttpResponse = {
+  //         val requestFactory = GoogleNetHttpTransport.newCompatibleTransport().createRequestFactory(); 
+  //         val request = requestFactory.buildRequest(method, new GenericUrl(url), null);
+  //         println(request.execute().parseAsString())
+
+  //         var response: MockLowLevelHttpResponse = new MockLowLevelHttpResponse()
+  //         response.addHeader("custom_header", "value")
+  //         response.setStatusCode(403)
+  //         response.setContentType(Json.MEDIA_TYPE)
+  //         response.setContent("{\"error\":\"not found\"}")
+  //         response
+  //       }
+  //     }
+  // }
   val jsonFactory = JacksonFactory.getDefaultInstance
   val tokenClientSecrets: GoogleClientSecrets = GoogleClientSecrets.load(jsonFactory, new StringReader(tokenClientSecretsJson))
   val tokenBucketName = "tokens-" + clientSecrets.getDetails.getClientId.stripSuffix(".apps.googleusercontent.com")
@@ -858,7 +888,7 @@ class HttpGoogleServicesDAO(
   override def getGenomicsOperation(jobId: String): Future[Option[JsObject]] = {
     implicit val service = GoogleInstrumentedService.Genomics
     val opId = s"operations/$jobId"
-    val genomicsApi = new Genomics.Builder(httpTransport, jsonFactory, getGenomicsServiceAccountCredential).setApplicationName(appName).build()
+    val genomicsApi = new Genomics.Builder(httpTransport, jsonFactory, buildInitializer(getGenomicsServiceAccountCredential)).setApplicationName(appName).build()
     val operationRequest = genomicsApi.operations().get(opId)
 
     retryWithRecoverWhen500orGoogleError(() => {
@@ -876,7 +906,7 @@ class HttpGoogleServicesDAO(
     implicit val service = GoogleInstrumentedService.Genomics
     val opId = "operations"
     val filter = s"projectId = $serviceProject"
-    val genomicsApi = new Genomics.Builder(httpTransport, jsonFactory, getGenomicsServiceAccountCredential).setApplicationName(appName).build()
+    val genomicsApi = new Genomics.Builder(httpTransport, jsonFactory, buildInitializer(getGenomicsServiceAccountCredential)).setApplicationName(appName).build()
     val operationRequest = genomicsApi.operations().list(opId).setFilter(filter)
     retryWhen500orGoogleError(() => {
       val list = executeGoogleRequest(operationRequest)
@@ -1113,27 +1143,27 @@ class HttpGoogleServicesDAO(
   def projectUsageExportBucketName(projectName: RawlsBillingProjectName) = s"${projectName.value}-usage-export"
 
   def getComputeManager(credential: Credential): Compute = {
-    new Compute.Builder(httpTransport, jsonFactory, credential).setApplicationName(appName).build()
+    new Compute.Builder(httpTransport, jsonFactory, buildInitializer(credential)).setApplicationName(appName).build()
   }
 
   def getCloudBillingManager(credential: Credential): Cloudbilling = {
-    new Cloudbilling.Builder(httpTransport, jsonFactory, credential).setApplicationName(appName).build()
+    new Cloudbilling.Builder(httpTransport, jsonFactory, buildInitializer(credential)).setApplicationName(appName).build()
   }
 
   def getServicesManager(credential: Credential): ServiceManagement = {
-    new ServiceManagement.Builder(httpTransport, jsonFactory, credential).setApplicationName(appName).build()
+    new ServiceManagement.Builder(httpTransport, jsonFactory, buildInitializer(credential)).setApplicationName(appName).build()
   }
 
   def getCloudResourceManager(credential: Credential): CloudResourceManager = {
-    new CloudResourceManager.Builder(httpTransport, jsonFactory, credential).setApplicationName(appName).build()
+    new CloudResourceManager.Builder(httpTransport, jsonFactory, buildInitializer(credential)).setApplicationName(appName).build()
   }
 
   def getStorage(credential: Credential) = {
-    new Storage.Builder(httpTransport, jsonFactory, credential).setApplicationName(appName).build()
+    new Storage.Builder(httpTransport, jsonFactory, buildInitializer(credential)).setApplicationName(appName).build()
   }
 
   def getGroupDirectory = {
-    new Directory.Builder(httpTransport, jsonFactory, getGroupServiceAccountCredential).setApplicationName(appName).build()
+    new Directory.Builder(httpTransport, jsonFactory, buildInitializer(getGroupServiceAccountCredential)).setApplicationName(appName).build()
   }
 
   private def getBucketCredential(userInfo: UserInfo): Credential = {
@@ -1143,8 +1173,80 @@ class HttpGoogleServicesDAO(
 
   private def getUserCredential(userInfo: UserInfo): Credential = {
     new GoogleCredential().setAccessToken(userInfo.accessToken.token).setExpiresInSeconds(userInfo.accessTokenExpiresIn)
-  }
+  } 
 
+
+  def buildInitializer(creds:Credential):HttpRequestInitializer = {
+    new HttpRequestInitializer() {
+      override def initialize(request:HttpRequest) {
+        // we use the creds to initialize the request so that it contains the headers we need, etc
+        creds.initialize(request)
+
+        request.setInterceptor(new HttpExecuteInterceptor() {
+          override def intercept(request:HttpRequest) = {
+            // we use the creds to intercept the request so that it can pass through untouched for normal calls
+            creds.intercept(request)
+
+            /* 
+            Inside here we can both introspect the request and modify it.  For instance, we could change the URL to a mock service
+            and we could strip some headers for the auth token so that the request only contains info that makes the call unique but 
+            reproducible.   
+
+            public HttpTransport getTransport() {
+            public String getRequestMethod() {
+            public GenericUrl getUrl() {
+            public HttpContent getContent() {
+            public HttpEncoding getEncoding() {
+            public BackOffPolicy getBackOffPolicy() {
+            public int getContentLoggingLimit() {
+            public int getConnectTimeout() {
+            public int getReadTimeout() {
+            public HttpHeaders getHeaders() {
+            public HttpHeaders getResponseHeaders() {
+            public HttpExecuteInterceptor getInterceptor() {
+            public HttpUnsuccessfulResponseHandler getUnsuccessfulResponseHandler() {
+            public HttpIOExceptionHandler getIOExceptionHandler() {
+            public HttpResponseInterceptor getResponseInterceptor() {
+            public int getNumberOfRetries() {
+            public final ObjectParser getParser() {
+            public boolean getFollowRedirects() {
+            public boolean getThrowExceptionOnExecuteError() {
+            public boolean getRetryOnExecuteIOException() {
+            public boolean getSuppressUserAgentSuffix() {
+            public Sleeper getSleeper() {
+            
+            public HttpRequest setRequestMethod(String requestMethod) {
+            public HttpRequest setUrl(GenericUrl url) {
+            public HttpRequest setContent(HttpContent content) {
+            public HttpRequest setEncoding(HttpEncoding encoding) {
+            public HttpRequest setBackOffPolicy(BackOffPolicy backOffPolicy) {
+            public HttpRequest setContentLoggingLimit(int contentLoggingLimit) {
+            public HttpRequest setLoggingEnabled(boolean loggingEnabled) {
+            public HttpRequest setCurlLoggingEnabled(boolean curlLoggingEnabled) {
+            public HttpRequest setConnectTimeout(int connectTimeout) {
+            public HttpRequest setReadTimeout(int readTimeout) {
+            public HttpRequest setHeaders(HttpHeaders headers) {
+            public HttpRequest setResponseHeaders(HttpHeaders responseHeaders) {
+            public HttpRequest setInterceptor(HttpExecuteInterceptor interceptor) {
+            public HttpRequest setUnsuccessfulResponseHandler(
+            public HttpRequest setIOExceptionHandler(HttpIOExceptionHandler ioExceptionHandler) {
+            public HttpRequest setResponseInterceptor(HttpResponseInterceptor responseInterceptor) {
+            public HttpRequest setNumberOfRetries(int numRetries) {
+            public HttpRequest setParser(ObjectParser parser) {
+            public HttpRequest setFollowRedirects(boolean followRedirects) {
+            public HttpRequest setThrowExceptionOnExecuteError(boolean throwExceptionOnExecuteError) {
+            public HttpRequest setRetryOnExecuteIOException(boolean retryOnExecuteIOException) {
+            public HttpRequest setSuppressUserAgentSuffix(boolean suppressUserAgentSuffix) {
+            public HttpRequest setSleeper(Sleeper sleeper) {
+            */
+            println("Intercepted HttpGoogleServicesDAO Request: ", request.getUrl(), request.getContent(), request.getHeaders())
+            // request.setXXXX...
+          }
+        })
+      }
+    }
+  }
+  
   private def getGroupServiceAccountCredential: Credential = {
     new GoogleCredential.Builder()
       .setTransport(httpTransport)
