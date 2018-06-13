@@ -15,7 +15,7 @@ import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
 import com.google.api.client.testing.http.{HttpTesting, MockHttpTransport, MockLowLevelHttpRequest, MockLowLevelHttpResponse}
 import com.google.api.client.googleapis.GoogleUtils
 import com.google.api.client.http.javanet.NetHttpTransport
-import com.google.api.client.http.{HttpTransport, HttpRequestFactory, GenericUrl, HttpRequestInitializer, HttpRequest, HttpExecuteInterceptor}
+import com.google.api.client.http.{HttpTransport, HttpRequestFactory, GenericUrl, HttpRequestInitializer, HttpRequest, HttpExecuteInterceptor, HttpResponseInterceptor, HttpResponse}
 import com.google.api.client.json.Json
 import com.google.api.client.http.{LowLevelHttpRequest, LowLevelHttpResponse}
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
@@ -1217,6 +1217,12 @@ class HttpGoogleServicesDAO(
             */
             println("Intercepted HttpGoogleServicesDAO Request: ", request.getUrl(), request.getContent(), request.getHeaders())
             // request.setXXXX...
+          }
+        })
+
+        request.setResponseInterceptor(new HttpResponseInterceptor() {
+		      override def interceptResponse(response:HttpResponse) = {
+            // Here we can capture the response from an http call and cache it if we aren't using something like wiremock 
           }
         })
       }
