@@ -93,7 +93,7 @@ class HttpGoogleServicesDAO(
   val genomicsScopes = Seq(GenomicsScopes.GENOMICS) // google requires GENOMICS, not just GENOMICS_READONLY, even though we're only doing reads
   val billingScopes = Seq("https://www.googleapis.com/auth/cloud-billing")
 
-  var httpTransport = GoogleNetHttpTransport.newTrustedTransport
+  val httpTransport = GoogleNetHttpTransport.newTrustedTransport
   val jsonFactory = JacksonFactory.getDefaultInstance
   val tokenClientSecrets: GoogleClientSecrets = GoogleClientSecrets.load(jsonFactory, new StringReader(tokenClientSecretsJson))
   val tokenBucketName = "tokens-" + clientSecrets.getDetails.getClientId.stripSuffix(".apps.googleusercontent.com")
