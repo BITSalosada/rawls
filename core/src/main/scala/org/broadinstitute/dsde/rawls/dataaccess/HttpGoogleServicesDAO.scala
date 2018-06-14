@@ -861,10 +861,12 @@ class HttpGoogleServicesDAO(
     } )
   }
 
+  val mockGenomics:Boolean = false
+  val genomicsUrl:String = if (mockGenomics) "http://docker.for.mac.localhost:8080" else Genomics.DEFAULT_ROOT_URL
   override def getGenomicsOperation(jobId: String): Future[Option[JsObject]] = {
     implicit val service = GoogleInstrumentedService.Genomics
     val opId = s"operations/$jobId"
-    val genomicsApi = new Genomics.Builder(httpTransport, jsonFactory, buildInitializer(getGenomicsServiceAccountCredential)).setApplicationName(appName).build()
+    val genomicsApi = new Genomics.Builder(httpTransport, jsonFactory, buildInitializer(getGenomicsServiceAccountCredential)).setRootUrl(genomicsUrl).setApplicationName(appName).build()
     val operationRequest = genomicsApi.operations().get(opId)
 
     retryWithRecoverWhen500orGoogleError(() => {
@@ -882,7 +884,7 @@ class HttpGoogleServicesDAO(
     implicit val service = GoogleInstrumentedService.Genomics
     val opId = "operations"
     val filter = s"projectId = $serviceProject"
-    val genomicsApi = new Genomics.Builder(httpTransport, jsonFactory, buildInitializer(getGenomicsServiceAccountCredential)).setApplicationName(appName).build()
+    val genomicsApi = new Genomics.Builder(httpTransport, jsonFactory, buildInitializer(getGenomicsServiceAccountCredential)).setRootUrl(genomicsUrl).setApplicationName(appName).build()
     val operationRequest = genomicsApi.operations().list(opId).setFilter(filter)
     retryWhen500orGoogleError(() => {
       val list = executeGoogleRequest(operationRequest)
@@ -1122,8 +1124,10 @@ class HttpGoogleServicesDAO(
     new Compute.Builder(httpTransport, jsonFactory, buildInitializer(credential)).setApplicationName(appName).build()
   }
 
+  val mockCloudBilling:Boolean = true
+  val cloudBillingUrl:String = if (mockCloudBilling) "http://docker.for.mac.localhost:8080" else Cloudbilling.DEFAULT_ROOT_URL
   def getCloudBillingManager(credential: Credential): Cloudbilling = {
-    new Cloudbilling.Builder(httpTransport, jsonFactory, buildInitializer(credential)).setApplicationName(appName).build()
+    new Cloudbilling.Builder(httpTransport, jsonFactory, buildInitializer(credential)).setRootUrl(cloudBillingUrl).setApplicationName(appName).build()
   }
 
   def getServicesManager(credential: Credential): ServiceManagement = {
@@ -1140,7 +1144,7 @@ class HttpGoogleServicesDAO(
 
   def getGroupDirectory = {
     new Directory.Builder(httpTransport, jsonFactory, buildInitializer(getGroupServiceAccountCredential)).setApplicationName(appName).build()
-  }
+  } 
 
   private def getBucketCredential(userInfo: UserInfo): Credential = {
     if (useServiceAccountForBuckets) getBucketServiceAccountCredential
@@ -1157,6 +1161,14 @@ class HttpGoogleServicesDAO(
       override def initialize(request:HttpRequest) {
         // we use the creds to initialize the request so that it contains the headers we need, etc
         creds.initialize(request)
+
+        println(Compute.DEFAULT_ROOT_URL)
+        println(Cloudbilling.DEFAULT_ROOT_URL)
+        println(ServiceManagement.DEFAULT_ROOT_URL)
+        println(CloudResourceManager.DEFAULT_ROOT_URL)
+        println(Storage.DEFAULT_ROOT_URL)
+        println(Directory.DEFAULT_ROOT_URL)
+        println(Genomics.DEFAULT_ROOT_URL)
 
         request.setInterceptor(new HttpExecuteInterceptor() {
           override def intercept(request:HttpRequest) = {
