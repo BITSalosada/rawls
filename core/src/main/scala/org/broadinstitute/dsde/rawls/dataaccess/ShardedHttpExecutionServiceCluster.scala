@@ -1,6 +1,7 @@
 package org.broadinstitute.dsde.rawls.dataaccess
 
 import akka.http.scaladsl.model.StatusCodes
+import com.typesafe.scalalogging.LazyLogging
 import org.broadinstitute.dsde.rawls.{RawlsException, RawlsExceptionWithErrorReport}
 import org.broadinstitute.dsde.rawls.dataaccess.slick.WorkflowRecord
 import org.broadinstitute.dsde.rawls.model._
@@ -12,7 +13,7 @@ import scala.concurrent.Future
 import scala.util.{Random, Try}
 
 
-class ShardedHttpExecutionServiceCluster (readMembers: Set[ClusterMember], submitMembers: Set[ClusterMember], dataSource: SlickDataSource) extends ExecutionServiceCluster {
+class ShardedHttpExecutionServiceCluster (readMembers: Set[ClusterMember], submitMembers: Set[ClusterMember], dataSource: SlickDataSource) extends ExecutionServiceCluster with LazyLogging {
 
   // make a copy of the members map as an array for easy reads; routing algorithm will return an index in this array.
   // ensure we sort the array by key for determinism/easy understanding
@@ -85,40 +86,54 @@ class ShardedHttpExecutionServiceCluster (readMembers: Set[ClusterMember], submi
     import spray.json._
     import spray.json.DefaultJsonProtocol._
 
-    for {
+    logger.info(s"Calling parseSubWorkflowIdsFromMetadata")
+    val result = for {
       callsObj <- metadata.getFields("calls")
       call <- callsObj.asJsObject().fields.values
       shard <- call.asInstanceOf[JsArray].elements
       id <- shard.asJsObject().getFields("subWorkflowId")
     } yield id.convertTo[String]
+    logger.info(s"End call to parseSubWorkflowIdsFromMetadata")
+    result
   }
 
   // parse subworkflow IDs from the parent workflow's metadata and label each of them with the Submission ID
   // so they can be found by future workflow metadata queries
 
   private def labelSubWorkflowsWithSubmissionId(submissionId: String, executionServiceId: ExecutionServiceId, parentWorkflowMetadata: JsObject, userInfo: UserInfo): Unit = {
+    logger.info(s"Calling labelSubWorkflowsWithSubmissionId on Submission $submissionId")
     // execute but don't wait for completion
     val labelFutureToIgnore = Future.traverse(parseSubWorkflowIdsFromMetadata(parentWorkflowMetadata)) { subWorkflowId =>
       getMember(executionServiceId).dao.patchLabels(subWorkflowId, userInfo, Map(SUBMISSION_ID_KEY -> submissionId))
     }
+    logger.info(s"End call to labelSubWorkflowsWithSubmissionId on Submission $submissionId")
   }
 
   // query the execution services to determine if this workflow is a member of this submission and get its execution service ID
-  def findExecService(submissionId: String, workflowId: String, userInfo: UserInfo, execId: Option[ExecutionServiceId] = None): Future[ExecutionServiceId] = execId match {
-    // this no-op case allows simpler logic in the caller
-    case Some(executionServiceId) => Future.successful(executionServiceId)
-    case _ =>
-      // we don't have the execution service key because the workflow is not in the DB.  It might be a subworkflow.
-      // query all execution services for Workflow labels and search for a Submission match
+  def findExecService(submissionId: String, workflowId: String, userInfo: UserInfo, execId: Option[ExecutionServiceId] = None): Future[ExecutionServiceId] = {
+    logger.info(s"Calling ShardedHttpExecutionServiceCluster.findExecService on Workflow $workflowId for Submission $submissionId")
 
-      // optimize for the Production Firecloud case: it's much more likely for the workflow to be in the single submitMember
-      findExecService(submitMembersById, submissionId, workflowId, userInfo) recoverWith { case _ =>
-        // we expect readMembers to be a superset of submitMembers so don't check those again
-        findExecService(readMembersById -- submitMembersById.keys, submissionId, workflowId, userInfo)
-      }
+    val result = execId match {
+      // this no-op case allows simpler logic in the caller
+      case Some(executionServiceId) => Future.successful(executionServiceId)
+      case _ =>
+        // we don't have the execution service key because the workflow is not in the DB.  It might be a subworkflow.
+        // query all execution services for Workflow labels and search for a Submission match
+
+        // optimize for the Production Firecloud case: it's much more likely for the workflow to be in the single submitMember
+        findExecService(submitMembersById, submissionId, workflowId, userInfo) recoverWith { case _ =>
+          // we expect readMembers to be a superset of submitMembers so don't check those again
+          findExecService(readMembersById -- submitMembersById.keys, submissionId, workflowId, userInfo)
+        }
+    }
+
+    logger.info(s"End call to ShardedHttpExecutionServiceCluster.findExecService on Workflow $workflowId for Submission $submissionId")
+    result
   }
 
   private def findExecService(services: Map[ExecutionServiceId, ClusterMember], submissionId: String, workflowId: String, userInfo: UserInfo): Future[ExecutionServiceId] = {
+    logger.info(s"Calling (inner) ShardedHttpExecutionServiceCluster.findExecService on Workflow $workflowId for Submission $submissionId")
+
     val idLabelMap = services.map { case (executionServiceId, member) =>
       member.dao.getLabels(workflowId, userInfo) map { labelResponse =>
         (executionServiceId, labelResponse.labels)
@@ -128,7 +143,7 @@ class ShardedHttpExecutionServiceCluster (readMembers: Set[ClusterMember], submi
     // find: gets "first" success, ignoring failures.  We expect a single hit.
     // more than one hit shouldn't happen - noting here that we pick one arbitrarily if it does.
 
-    Future.find(idLabelMap) { case (_, labels) =>
+    val result = Future.find(idLabelMap) { case (_, labels) =>
       labels.exists(_ == SUBMISSION_ID_KEY -> submissionId)
     } map {
       case Some((executionServiceId, _)) => executionServiceId
@@ -136,16 +151,24 @@ class ShardedHttpExecutionServiceCluster (readMembers: Set[ClusterMember], submi
         val errReport = ErrorReport(s"Could not find a Workflow with ID $workflowId with Submission $submissionId in any Execution Service", Option(StatusCodes.NotFound), Seq.empty, Seq.empty, None)
         throw new RawlsExceptionWithErrorReport(errReport)
     }
+
+    logger.info(s"End call to (inner) ShardedHttpExecutionServiceCluster.findExecService on Workflow $workflowId for Submission $submissionId")
+    result
   }
 
   def callLevelMetadata(submissionId: String, workflowId: String, execId: Option[ExecutionServiceId], userInfo: UserInfo): Future[JsObject] = {
-    for {
+    logger.info(s"Calling ShardedHttpExecutionServiceCluster.callLevelMetadata on Workflow $workflowId for Submission $submissionId")
+
+    val result = for {
       executionServiceId <- findExecService(submissionId, workflowId, userInfo, execId)
       metadata <- getMember(executionServiceId).dao.callLevelMetadata(workflowId, userInfo)
     } yield {
       labelSubWorkflowsWithSubmissionId(submissionId, executionServiceId, metadata, userInfo)
       metadata
     }
+
+    logger.info(s"End call to ShardedHttpExecutionServiceCluster.callLevelMetadata on Workflow $workflowId for Submission $submissionId")
+    result
   }
 
   // ====================
