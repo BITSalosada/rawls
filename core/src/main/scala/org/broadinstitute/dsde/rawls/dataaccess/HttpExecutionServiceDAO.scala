@@ -57,8 +57,11 @@ class HttpExecutionServiceDAO(executionServiceURL: String, override val workbenc
   }
 
   override def callLevelMetadata(id: String, userInfo: UserInfo): Future[JsObject] = {
+    logger.info(s"Calling HttpExecutionServiceDAO.callLevelMetadata on Workflow $id")
     val url = executionServiceURL + s"/api/workflows/v1/${id}/metadata"
-    retry(when500) { () => pipeline[JsObject](userInfo) apply Get(url) }
+    val result = retry(when500) { () => pipeline[JsObject](userInfo) apply Get(url) }
+    logger.info(s"End call to HttpExecutionServiceDAO.callLevelMetadata on Workflow $id")
+    result
   }
 
   override def outputs(id: String, userInfo: UserInfo): Future[ExecutionServiceOutputs] = {
@@ -77,13 +80,19 @@ class HttpExecutionServiceDAO(executionServiceURL: String, override val workbenc
   }
 
   override def getLabels(id: String, userInfo: UserInfo): Future[ExecutionServiceLabelResponse] = {
+    logger.info(s"Calling HttpExecutionServiceDAO.getLabels on Workflow $id")
     val url = executionServiceURL + s"/api/workflows/v1/${id}/labels"
-    retry(when500) { () => pipeline[ExecutionServiceLabelResponse](userInfo) apply Get(url) }
+    val result = retry(when500) { () => pipeline[ExecutionServiceLabelResponse](userInfo) apply Get(url) }
+    logger.info(s"End call to HttpExecutionServiceDAO.getLabels on Workflow $id")
+    result
   }
 
   override def patchLabels(id: String, userInfo: UserInfo, labels: Map[String, String]): Future[ExecutionServiceLabelResponse] = {
+    logger.info(s"Calling HttpExecutionServiceDAO.patchLabels on Workflow $id")
     val url = executionServiceURL + s"/api/workflows/v1/${id}/labels"
-    retry(when500) { () => pipeline[ExecutionServiceLabelResponse](userInfo) apply Patch(url, labels) }
+    val result = retry(when500) { () => pipeline[ExecutionServiceLabelResponse](userInfo) apply Patch(url, labels) }
+    logger.info(s"End call to HttpExecutionServiceDAO.patchLabels on Workflow $id")
+    result
   }
 
   override def version: Future[ExecutionServiceVersion] = {
