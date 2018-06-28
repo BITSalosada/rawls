@@ -87,14 +87,16 @@ class ShardedHttpExecutionServiceCluster (readMembers: Set[ClusterMember], submi
     import spray.json.DefaultJsonProtocol._
 
     logger.info(s"Calling parseSubWorkflowIdsFromMetadata")
-    val result = for {
+    for {
       callsObj <- metadata.getFields("calls")
       call <- callsObj.asJsObject().fields.values
       shard <- call.asInstanceOf[JsArray].elements
       id <- shard.asJsObject().getFields("subWorkflowId")
-    } yield id.convertTo[String]
-    logger.info(s"End call to parseSubWorkflowIdsFromMetadata")
-    result
+    } yield {
+      val result = id.convertTo[String]
+      logger.info(s"End call to parseSubWorkflowIdsFromMetadata")
+      result
+    }
   }
 
   // parse subworkflow IDs from the parent workflow's metadata and label each of them with the Submission ID
@@ -103,17 +105,19 @@ class ShardedHttpExecutionServiceCluster (readMembers: Set[ClusterMember], submi
   private def labelSubWorkflowsWithSubmissionId(submissionId: String, executionServiceId: ExecutionServiceId, parentWorkflowMetadata: JsObject, userInfo: UserInfo): Unit = {
     logger.info(s"Calling labelSubWorkflowsWithSubmissionId on Submission $submissionId")
     // execute but don't wait for completion
-    val labelFutureToIgnore = Future.traverse(parseSubWorkflowIdsFromMetadata(parentWorkflowMetadata)) { subWorkflowId =>
+    Future.traverse(parseSubWorkflowIdsFromMetadata(parentWorkflowMetadata)) { subWorkflowId =>
       getMember(executionServiceId).dao.patchLabels(subWorkflowId, userInfo, Map(SUBMISSION_ID_KEY -> submissionId))
+    } map { _ =>
+      logger.info(s"End call (waiting on futures) to labelSubWorkflowsWithSubmissionId on Submission $submissionId")
     }
-    logger.info(s"End call to labelSubWorkflowsWithSubmissionId on Submission $submissionId")
+    logger.info(s"End call (not waiting on futures) to labelSubWorkflowsWithSubmissionId on Submission $submissionId")
   }
 
   // query the execution services to determine if this workflow is a member of this submission and get its execution service ID
   def findExecService(submissionId: String, workflowId: String, userInfo: UserInfo, execId: Option[ExecutionServiceId] = None): Future[ExecutionServiceId] = {
     logger.info(s"Calling ShardedHttpExecutionServiceCluster.findExecService on Workflow $workflowId for Submission $submissionId")
 
-    val result = execId match {
+    val result1 = execId match {
       // this no-op case allows simpler logic in the caller
       case Some(executionServiceId) => Future.successful(executionServiceId)
       case _ =>
@@ -127,8 +131,10 @@ class ShardedHttpExecutionServiceCluster (readMembers: Set[ClusterMember], submi
         }
     }
 
-    logger.info(s"End call to ShardedHttpExecutionServiceCluster.findExecService on Workflow $workflowId for Submission $submissionId")
-    result
+    result1 map { result2 =>
+      logger.info(s"End call to ShardedHttpExecutionServiceCluster.findExecService on Workflow $workflowId for Submission $submissionId")
+      result2
+    }
   }
 
   private def findExecService(services: Map[ExecutionServiceId, ClusterMember], submissionId: String, workflowId: String, userInfo: UserInfo): Future[ExecutionServiceId] = {
@@ -143,7 +149,7 @@ class ShardedHttpExecutionServiceCluster (readMembers: Set[ClusterMember], submi
     // find: gets "first" success, ignoring failures.  We expect a single hit.
     // more than one hit shouldn't happen - noting here that we pick one arbitrarily if it does.
 
-    val result = Future.find(idLabelMap) { case (_, labels) =>
+    val result1 = Future.find(idLabelMap) { case (_, labels) =>
       labels.exists(_ == SUBMISSION_ID_KEY -> submissionId)
     } map {
       case Some((executionServiceId, _)) => executionServiceId
@@ -152,23 +158,23 @@ class ShardedHttpExecutionServiceCluster (readMembers: Set[ClusterMember], submi
         throw new RawlsExceptionWithErrorReport(errReport)
     }
 
-    logger.info(s"End call to (inner) ShardedHttpExecutionServiceCluster.findExecService on Workflow $workflowId for Submission $submissionId")
-    result
+    result1 map { result2 =>
+      logger.info(s"End call to (inner) ShardedHttpExecutionServiceCluster.findExecService on Workflow $workflowId for Submission $submissionId")
+      result2
+    }
   }
 
   def callLevelMetadata(submissionId: String, workflowId: String, execId: Option[ExecutionServiceId], userInfo: UserInfo): Future[JsObject] = {
     logger.info(s"Calling ShardedHttpExecutionServiceCluster.callLevelMetadata on Workflow $workflowId for Submission $submissionId")
 
-    val result = for {
+    for {
       executionServiceId <- findExecService(submissionId, workflowId, userInfo, execId)
       metadata <- getMember(executionServiceId).dao.callLevelMetadata(workflowId, userInfo)
     } yield {
       labelSubWorkflowsWithSubmissionId(submissionId, executionServiceId, metadata, userInfo)
+      logger.info(s"End call to ShardedHttpExecutionServiceCluster.callLevelMetadata on Workflow $workflowId for Submission $submissionId")
       metadata
     }
-
-    logger.info(s"End call to ShardedHttpExecutionServiceCluster.callLevelMetadata on Workflow $workflowId for Submission $submissionId")
-    result
   }
 
   // ====================

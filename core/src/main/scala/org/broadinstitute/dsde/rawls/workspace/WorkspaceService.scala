@@ -1627,12 +1627,12 @@ class WorkspaceService(protected val userInfo: UserInfo, val dataSource: SlickDa
     }
 
     // query the execution service(s) for the metadata
-    val result = execIdFutOpt flatMap {
+    execIdFutOpt flatMap {
       executionServiceCluster.callLevelMetadata(submissionId, workflowId, _, userInfo)
-    } map(RequestComplete(StatusCodes.OK, _))
-
-    logger.info(s"End call to workflowMetadata on Workflow $workflowId for Submission $submissionId")
-    result
+    } map {
+      logger.info(s"End call to workflowMetadata on Workflow $workflowId for Submission $submissionId")
+      RequestComplete(StatusCodes.OK, _)
+    }
   }
 
   def workflowQueueStatus() = {

@@ -59,9 +59,11 @@ class HttpExecutionServiceDAO(executionServiceURL: String, override val workbenc
   override def callLevelMetadata(id: String, userInfo: UserInfo): Future[JsObject] = {
     logger.info(s"Calling HttpExecutionServiceDAO.callLevelMetadata on Workflow $id")
     val url = executionServiceURL + s"/api/workflows/v1/${id}/metadata"
-    val result = retry(when500) { () => pipeline[JsObject](userInfo) apply Get(url) }
-    logger.info(s"End call to HttpExecutionServiceDAO.callLevelMetadata on Workflow $id")
-    result
+    val result1 = retry(when500) { () => pipeline[JsObject](userInfo) apply Get(url) } map { result2 =>
+      logger.info(s"End call to HttpExecutionServiceDAO.callLevelMetadata on Workflow $id")
+      result2
+    }
+    result1
   }
 
   override def outputs(id: String, userInfo: UserInfo): Future[ExecutionServiceOutputs] = {
@@ -82,17 +84,21 @@ class HttpExecutionServiceDAO(executionServiceURL: String, override val workbenc
   override def getLabels(id: String, userInfo: UserInfo): Future[ExecutionServiceLabelResponse] = {
     logger.info(s"Calling HttpExecutionServiceDAO.getLabels on Workflow $id")
     val url = executionServiceURL + s"/api/workflows/v1/${id}/labels"
-    val result = retry(when500) { () => pipeline[ExecutionServiceLabelResponse](userInfo) apply Get(url) }
-    logger.info(s"End call to HttpExecutionServiceDAO.getLabels on Workflow $id")
-    result
+    val result1 = retry(when500) { () => pipeline[ExecutionServiceLabelResponse](userInfo) apply Get(url) } map { result2 =>
+      logger.info(s"End call to HttpExecutionServiceDAO.getLabels on Workflow $id")
+      result2
+    }
+    result1
   }
 
   override def patchLabels(id: String, userInfo: UserInfo, labels: Map[String, String]): Future[ExecutionServiceLabelResponse] = {
     logger.info(s"Calling HttpExecutionServiceDAO.patchLabels on Workflow $id")
     val url = executionServiceURL + s"/api/workflows/v1/${id}/labels"
-    val result = retry(when500) { () => pipeline[ExecutionServiceLabelResponse](userInfo) apply Patch(url, labels) }
-    logger.info(s"End call to HttpExecutionServiceDAO.patchLabels on Workflow $id")
-    result
+    val result1 = retry(when500) { () => pipeline[ExecutionServiceLabelResponse](userInfo) apply Patch(url, labels) } map { result2 =>
+      logger.info(s"End call to HttpExecutionServiceDAO.patchLabels on Workflow $id")
+      result2
+    }
+    result1
   }
 
   override def version: Future[ExecutionServiceVersion] = {
