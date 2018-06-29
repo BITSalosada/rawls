@@ -260,6 +260,8 @@ class RawlsApiSpec extends TestKit(ActorSystem("MySpec")) with FreeSpecLike with
             }
           }
 
+          println(s"Submission = $submissionId, First WF ID = $firstWorkflowId")
+
           // retrieve the workflow's metadata.
           // Orchestration times out in 1 minute, so we want to be well below that
 
@@ -287,7 +289,12 @@ class RawlsApiSpec extends TestKit(ActorSystem("MySpec")) with FreeSpecLike with
 
           // NOT YET.  Known issue in this iteration of firecloud-app#97
           // TODO: uncomment when the real solution is in place
-          //Random.shuffle(subworkflowIds.take(4)).foreach { cromwellMetadata(_) }
+
+          val subwfs = subworkflowIds.take(4)
+
+          println(s"SubWFs = ${subwfs mkString ","}")
+
+          Random.shuffle(subwfs).foreach { cromwellMetadata(_) }
 
           // clean up: Abort and wait for one minute or Aborted, whichever comes first
           // Timeout is OK here: just make a best effort
