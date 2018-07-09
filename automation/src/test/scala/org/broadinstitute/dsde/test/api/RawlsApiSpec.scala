@@ -287,7 +287,7 @@ class RawlsApiSpec extends TestKit(ActorSystem("MySpec")) with FreeSpecLike with
 
           // NOT YET.  Known issue in this iteration of firecloud-app#97
           // TODO: uncomment when the real solution is in place
-          //Random.shuffle(subworkflowIds.take(4)).foreach { cromwellMetadata(_) }
+          Random.shuffle(subworkflowIds.take(10)).foreach { cromwellMetadata(_) }
 
           // clean up: Abort and wait for one minute or Aborted, whichever comes first
           // Timeout is OK here: just make a best effort
