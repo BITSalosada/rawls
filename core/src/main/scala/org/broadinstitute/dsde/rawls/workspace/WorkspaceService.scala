@@ -1672,6 +1672,7 @@ class WorkspaceService(protected val userInfo: UserInfo, val dataSource: SlickDa
    If the user has write access, we need to use the pet for this workspace's project in order to get accurate results.
  */
   def checkBucketReadAccess(workspaceName: WorkspaceName) = {
+    val tick:Long = System.currentTimeMillis()
     for {
       (workspace, maxAccessLevel) <- dataSource.inTransaction { dataAccess =>
         withWorkspaceContextAndPermissions(workspaceName, WorkspaceAccessLevels.Read, dataAccess) { workspaceContext =>
@@ -1691,8 +1692,14 @@ class WorkspaceService(protected val userInfo: UserInfo, val dataSource: SlickDa
       resultsForPet <- gcsDAO.diagnosticBucketRead(UserInfo(userInfo.userEmail, OAuth2BearerToken(accessToken), 60, userInfo.userSubjectId), workspace.bucketName)
     } yield {
       resultsForPet match {
-        case None => RequestComplete(StatusCodes.OK)
-        case Some(report) => RequestComplete(report)
+        case None =>
+          val tock = System.currentTimeMillis() - tick
+          logger.warn(s"======>>>>>> checkBucketReadAccess completed in $tock ms")
+          RequestComplete(StatusCodes.OK)
+        case Some(report) =>
+          val tock = System.currentTimeMillis() - tick
+          logger.warn(s"======>>>>>> checkBucketReadAccess completed in $tock ms")
+          RequestComplete(report)
       }
     }
   }
