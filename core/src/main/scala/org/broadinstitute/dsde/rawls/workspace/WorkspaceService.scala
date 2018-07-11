@@ -1694,11 +1694,11 @@ class WorkspaceService(protected val userInfo: UserInfo, val dataSource: SlickDa
       resultsForPet match {
         case None =>
           val tock = System.currentTimeMillis() - tick
-          logger.warn(s"======>>>>>> checkBucketReadAccess completed in $tock ms")
+          logger.warn(s"======>>>>>> checkBucketReadAccess completed in $tock ms: OK")
           RequestComplete(StatusCodes.OK)
         case Some(report) =>
           val tock = System.currentTimeMillis() - tick
-          logger.warn(s"======>>>>>> checkBucketReadAccess completed in $tock ms")
+          logger.warn(s"======>>>>>> checkBucketReadAccess completed in $tock ms: " + report.message)
           RequestComplete(report)
       }
     }
