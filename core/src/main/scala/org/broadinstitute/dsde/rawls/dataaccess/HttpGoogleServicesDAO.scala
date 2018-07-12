@@ -723,30 +723,31 @@ class HttpGoogleServicesDAO(
     // call the GCS JSON API as the default pet; we must use the XML API. In turn, this means we cannot use
     // the GCS client library (which internally calls the JSON API); we must hand-code a call to the XML API.
 
-    val requestId = java.util.UUID.randomUUID().toString
-    val tick:Long = System.currentTimeMillis()
-    logger.warn(s"======>>>>>> diagnosticBucketRead starting: $requestId")
-
-    val bucketUrl = s"https://storage.googleapis.com/$bucketName"
-    val bucketRequest = httpClientUtils.addHeader(RequestBuilding.Head(bucketUrl), Authorization(userInfo.accessToken))
-
-    httpClientUtils.executeRequest(http, bucketRequest) map { httpResponse =>
-      httpResponse.status match {
-        case StatusCodes.OK =>
-          val tock = System.currentTimeMillis() - tick
-          logger.warn(s"======>>>>>> diagnosticBucketRead $requestId completed in $tock ms: OK")
-          None
-        case x =>
-          val tock = System.currentTimeMillis() - tick
-          logger.warn(s"======>>>>>> diagnosticBucketRead $requestId completed in $tock ms: ${x.intValue()}")
-          Some(ErrorReport(x, x.defaultMessage()))
-      }
-    } recover {
-      case t:Throwable =>
-        val tock = System.currentTimeMillis() - tick
-        logger.warn(s"======>>>>>> diagnosticBucketRead $requestId completed in $tock ms: ${t.getMessage}")
-        Some(ErrorReport(t))
-    }
+//    val requestId = java.util.UUID.randomUUID().toString
+//    val tick:Long = System.currentTimeMillis()
+//    logger.warn(s"======>>>>>> diagnosticBucketRead starting: $requestId")
+//
+//    val bucketUrl = s"https://storage.googleapis.com/$bucketName"
+//    val bucketRequest = httpClientUtils.addHeader(RequestBuilding.Head(bucketUrl), Authorization(userInfo.accessToken))
+//
+//    httpClientUtils.executeRequest(http, bucketRequest) map { httpResponse =>
+//      httpResponse.status match {
+//        case StatusCodes.OK =>
+//          val tock = System.currentTimeMillis() - tick
+//          logger.warn(s"======>>>>>> diagnosticBucketRead $requestId completed in $tock ms: OK")
+//          None
+//        case x =>
+//          val tock = System.currentTimeMillis() - tick
+//          logger.warn(s"======>>>>>> diagnosticBucketRead $requestId completed in $tock ms: ${x.intValue()}")
+//          Some(ErrorReport(x, x.defaultMessage()))
+//      }
+//    } recover {
+//      case t:Throwable =>
+//        val tock = System.currentTimeMillis() - tick
+//        logger.warn(s"======>>>>>> diagnosticBucketRead $requestId completed in $tock ms: ${t.getMessage}")
+//        Some(ErrorReport(t))
+//    }
+    Future.successful(None)
   }
 
   /**
