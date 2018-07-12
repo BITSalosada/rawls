@@ -47,6 +47,7 @@ class HttpSamDAO(baseSamServiceURL: String, serviceAccountCreds: Credential)(imp
   protected def when401or500(throwable: Throwable): Boolean = {
     throwable match {
       case t: RawlsExceptionWithErrorReport =>
+        logger.warn("HttpSamDAO retry possibility on code " + t.errorReport.statusCode)
         t.errorReport.statusCode.exists(status => (status.intValue/100 == 5) || status.intValue == 401)
       case _ => false
     }

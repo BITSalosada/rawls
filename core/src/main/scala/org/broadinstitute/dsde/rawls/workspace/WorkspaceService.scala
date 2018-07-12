@@ -1672,7 +1672,10 @@ class WorkspaceService(protected val userInfo: UserInfo, val dataSource: SlickDa
    If the user has write access, we need to use the pet for this workspace's project in order to get accurate results.
  */
   def checkBucketReadAccess(workspaceName: WorkspaceName) = {
+    val requestId = java.util.UUID.randomUUID().toString
     val tick:Long = System.currentTimeMillis()
+    logger.warn(s"======>>>>>> checkBucketReadAccess starting: $requestId")
+
     for {
       (workspace, maxAccessLevel) <- dataSource.inTransaction { dataAccess =>
         withWorkspaceContextAndPermissions(workspaceName, WorkspaceAccessLevels.Read, dataAccess) { workspaceContext =>
@@ -1682,10 +1685,11 @@ class WorkspaceService(protected val userInfo: UserInfo, val dataSource: SlickDa
         }
       }
 
-      petKey <- if (maxAccessLevel >= WorkspaceAccessLevels.Write)
+      petKey <- if (maxAccessLevel >= WorkspaceAccessLevels.Write) {
         samDAO.getPetServiceAccountKeyForUser(workspace.namespace, userInfo.userEmail)
-      else
+      } else {
         samDAO.getDefaultPetServiceAccountKeyForUser(userInfo)
+      }
 
       accessToken <- gcsDAO.getAccessTokenUsingJson(petKey)
 
@@ -1694,11 +1698,11 @@ class WorkspaceService(protected val userInfo: UserInfo, val dataSource: SlickDa
       resultsForPet match {
         case None =>
           val tock = System.currentTimeMillis() - tick
-          logger.warn(s"======>>>>>> checkBucketReadAccess completed in $tock ms: OK")
+          logger.warn(s"======>>>>>> checkBucketReadAccess $requestId completed in $tock ms: OK")
           RequestComplete(StatusCodes.OK)
         case Some(report) =>
           val tock = System.currentTimeMillis() - tick
-          logger.warn(s"======>>>>>> checkBucketReadAccess completed in $tock ms: " + report.message)
+          logger.warn(s"======>>>>>> checkBucketReadAccess $requestId completed in $tock ms: " + report.message)
           RequestComplete(report)
       }
     }
