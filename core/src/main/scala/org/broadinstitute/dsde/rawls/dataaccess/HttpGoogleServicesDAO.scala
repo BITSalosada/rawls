@@ -878,7 +878,8 @@ class HttpGoogleServicesDAO(
   override def getGenomicsOperation(jobId: String): Future[Option[JsObject]] = {
     implicit val service = GoogleInstrumentedService.Genomics
     val opId = s"operations/$jobId"
-    val genomicsApi = new Genomics.Builder(httpTransport, jsonFactory, buildInitializer(getGenomicsServiceAccountCredential)).setRootUrl(genomicsUrl).setApplicationName(appName).build()
+    val genomicsApi = new Genomics.Builder(httpTransport, jsonFactory, getGenomicsServiceAccountCredential).setApplicationName(appName).build()
+    // val genomicsApi = new Genomics.Builder(httpTransport, jsonFactory, buildInitializer(getGenomicsServiceAccountCredential)).setRootUrl(genomicsUrl).setApplicationName(appName).build()
 
     val operationRequest = genomicsApi.operations().get(opId)
 
@@ -897,7 +898,8 @@ class HttpGoogleServicesDAO(
     implicit val service = GoogleInstrumentedService.Genomics
     val opId = "operations"
     val filter = s"projectId = $serviceProject"
-    val genomicsApi = new Genomics.Builder(httpTransport, jsonFactory, buildInitializer(getGenomicsServiceAccountCredential)).setRootUrl(genomicsUrl).setApplicationName(appName).build()
+    val genomicsApi = new Genomics.Builder(httpTransport, jsonFactory, getGenomicsServiceAccountCredential).setApplicationName(appName).build()
+    // val genomicsApi = new Genomics.Builder(httpTransport, jsonFactory, buildInitializer(getGenomicsServiceAccountCredential)).setRootUrl(genomicsUrl).setApplicationName(appName).build()
 
     val operationRequest = genomicsApi.operations().list(opId).setFilter(filter)
     retryWhen500orGoogleError(() => {
