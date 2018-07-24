@@ -873,7 +873,7 @@ class HttpGoogleServicesDAO(
   }
 
   val mockGenomics:Boolean = false
-  val genomicsUrl:String = if (mockGenomics) "http://localhost:8080" else Genomics.DEFAULT_ROOT_URL
+  //TODO val genomicsUrl:String = if (mockGenomics) "http://localhost:8080" else Genomics.DEFAULT_ROOT_URL
 
   override def getGenomicsOperation(jobId: String): Future[Option[JsObject]] = {
     implicit val service = GoogleInstrumentedService.Genomics
