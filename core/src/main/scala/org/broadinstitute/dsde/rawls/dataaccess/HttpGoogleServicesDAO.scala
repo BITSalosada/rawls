@@ -1139,7 +1139,7 @@ class HttpGoogleServicesDAO(
   }
 
   val mockCloudBilling:Boolean = true
-  val cloudBillingUrl:String = if (mockCloudBilling) "localhost:8080" else Cloudbilling.DEFAULT_ROOT_URL
+  val cloudBillingUrl:String = if (mockCloudBilling) "http://localhost:8080" else Cloudbilling.DEFAULT_ROOT_URL
 
   def getCloudBillingManager(credential: Credential): Cloudbilling = {
     new Cloudbilling.Builder(httpTransport, jsonFactory, buildInitializer(credential)).setRootUrl(cloudBillingUrl).setApplicationName(appName).build()
