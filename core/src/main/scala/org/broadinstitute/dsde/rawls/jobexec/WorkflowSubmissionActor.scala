@@ -290,9 +290,7 @@ trait WorkflowSubmission extends FutureSupport with LazyLogging with MethodWiths
     val workflowBatchFuture = for {
       //yank things from the db. note this future has already started running and we're just waiting on it here
       (wfRecs, workflowBatch, billingProject, submitter, methodConfig) <- dbThingsFuture
-
-      petSAJson <- samDAO.getPetServiceAccountKeyForUser(billingProject.projectName.value, submitter.userEmail)
-      petUserInfo <- googleServicesDAO.getUserInfoUsingJson(petSAJson)
+      petUserInfo <- samDAO.getCachedPetUserInfo(submitter.userEmail, billingProject.projectName.value)
       userCredentials <- googleServicesDAO.getUserCredentials(submitter).map(_.getOrElse(throw new RawlsException(s"cannot find credentials for $submitter")))
       wdl <- getWdl(methodConfig, userCredentials)
     } yield {

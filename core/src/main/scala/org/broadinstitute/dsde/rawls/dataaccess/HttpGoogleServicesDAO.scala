@@ -89,13 +89,6 @@ class HttpGoogleServicesDAO(
   val HIGH_SECURITY_LABEL = "high"
   val LOW_SECURITY_LABEL = "low"
 
-  // modify these if we need more granular access in the future
-  val workbenchLoginScopes = Seq(PlusScopes.USERINFO_EMAIL, PlusScopes.USERINFO_PROFILE)
-  val storageScopes = Seq(StorageScopes.DEVSTORAGE_FULL_CONTROL, ComputeScopes.COMPUTE) ++ workbenchLoginScopes
-  val directoryScopes = Seq(DirectoryScopes.ADMIN_DIRECTORY_GROUP)
-  val genomicsScopes = Seq(GenomicsScopes.GENOMICS) // google requires GENOMICS, not just GENOMICS_READONLY, even though we're only doing reads
-  val billingScopes = Seq("https://www.googleapis.com/auth/cloud-billing")
-
   val httpTransport = GoogleNetHttpTransport.newTrustedTransport
   val jsonFactory = JacksonFactory.getDefaultInstance
   val tokenClientSecrets: GoogleClientSecrets = GoogleClientSecrets.load(jsonFactory, new StringReader(tokenClientSecretsJson))
@@ -794,7 +787,7 @@ class HttpGoogleServicesDAO(
         // This error message is purely informational. A client can determine which scopes it has
         // been granted, so an insufficiently-scoped request would generally point to a programming
         // error.
-        throw new RawlsExceptionWithErrorReport(ErrorReport(StatusCodes.Forbidden, BillingAccountScopes(billingScopes).toJson.toString))
+        throw new RawlsExceptionWithErrorReport(ErrorReport(StatusCodes.Forbidden, BillingAccountScopes(GoogleServicesDAO.billingScopes).toJson.toString))
     }
   }
 
@@ -1188,7 +1181,7 @@ class HttpGoogleServicesDAO(
       .setTransport(httpTransport)
       .setJsonFactory(jsonFactory)
       .setServiceAccountId(clientEmail)
-      .setServiceAccountScopes(directoryScopes)
+      .setServiceAccountScopes(GoogleServicesDAO.directoryScopes)
       .setServiceAccountUser(subEmail)
       .setServiceAccountPrivateKeyFromPemFile(new java.io.File(pemFile))
       .build()
@@ -1199,7 +1192,7 @@ class HttpGoogleServicesDAO(
       .setTransport(httpTransport)
       .setJsonFactory(jsonFactory)
       .setServiceAccountId(clientEmail)
-      .setServiceAccountScopes(storageScopes) // grant bucket-creation powers
+      .setServiceAccountScopes(GoogleServicesDAO.storageScopes) // grant bucket-creation powers
       .setServiceAccountPrivateKeyFromPemFile(new java.io.File(pemFile))
       .build()
   }
@@ -1209,7 +1202,7 @@ class HttpGoogleServicesDAO(
       .setTransport(httpTransport)
       .setJsonFactory(jsonFactory)
       .setServiceAccountId(clientEmail)
-      .setServiceAccountScopes(genomicsScopes)
+      .setServiceAccountScopes(GoogleServicesDAO.genomicsScopes)
       .setServiceAccountPrivateKeyFromPemFile(new java.io.File(pemFile))
       .build()
   }
@@ -1257,17 +1250,8 @@ class HttpGoogleServicesDAO(
     implicit val service = GoogleInstrumentedService.OAuth
     retryWhen500orGoogleError(() => {
       val keyStream = new ByteArrayInputStream(saKey.getBytes)
-      val credential = ServiceAccountCredentials.fromStream(keyStream).createScoped(storageScopes)
+      val credential = ServiceAccountCredentials.fromStream(keyStream).createScoped(GoogleServicesDAO.storageScopes)
       credential.refreshAccessToken.getTokenValue
-    })
-  }
-
-  def getUserInfoUsingJson(saKey: String): Future[UserInfo] = {
-    implicit val service = GoogleInstrumentedService.OAuth
-    retryWhen500orGoogleError(() => {
-      val keyStream = new ByteArrayInputStream(saKey.getBytes)
-      val credential = ServiceAccountCredentials.fromStream(keyStream).createScoped(storageScopes)
-      UserInfo.buildFromTokens(credential)
     })
   }
 

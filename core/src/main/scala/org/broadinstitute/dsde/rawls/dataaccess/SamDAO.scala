@@ -11,7 +11,7 @@ import scala.concurrent.Future
 /**
   * Created by mbemis on 9/11/17.
   */
-trait SamDAO extends ErrorReportable {
+trait SamDAO extends ErrorReportable with PetUserInfoCache {
   val errorReportSource = ErrorReportSource("sam")
   def registerUser(userInfo: UserInfo): Future[Option[UserStatus]]
   def getUserStatus(userInfo: UserInfo): Future[Option[UserStatus]]
@@ -56,6 +56,7 @@ trait SamDAO extends ErrorReportable {
   def getDefaultPetServiceAccountKeyForUser(userInfo: UserInfo): Future[String]
 
   def getStatus(): Future[SubsystemStatus]
+
 }
 
 object SamResourceActions {

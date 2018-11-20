@@ -186,15 +186,6 @@ trait SubmissionMonitor extends FutureSupport with LazyLogging with RawlsInstrum
       }
     }
 
-    def getPetSAUserInfo(workspaceNamespace: String, submitterEmail: RawlsUserEmail): Future[UserInfo] = {
-      for {
-      petSAJson <- samDAO.getPetServiceAccountKeyForUser(workspaceNamespace, submitterEmail)
-      petUserInfo <- googleServicesDAO.getUserInfoUsingJson(petSAJson)
-      } yield {
-        petUserInfo
-      }
-    }
-
     def abortActiveWorkflows(submissionId: UUID): Future[Seq[(Option[String], Try[ExecutionServiceStatus])]] = {
       datasource.inTransaction { dataAccess =>
         for {
@@ -206,7 +197,7 @@ trait SubmissionMonitor extends FutureSupport with LazyLogging with RawlsInstrum
         }
       } flatMap { case (workflowRecs, submitter, workspaceRec) =>
           for {
-            petUserInfo <- getPetSAUserInfo(workspaceRec.namespace, submitter.userEmail)
+            petUserInfo <- samDAO.getCachedPetUserInfo(submitter.userEmail, workspaceRec.namespace)
             abortResults <- Future.traverse(workflowRecs) { workflowRec =>
               Future.successful(workflowRec.externalId).zip(executionServiceCluster.abort(workflowRec, petUserInfo))
             }
@@ -236,7 +227,7 @@ trait SubmissionMonitor extends FutureSupport with LazyLogging with RawlsInstrum
         }
       } flatMap { case (externalWorkflowIds, submitter, workspaceRec) =>
         for {
-          petUserInfo <- getPetSAUserInfo(workspaceRec.namespace, submitter.userEmail)
+          petUserInfo <- samDAO.getCachedPetUserInfo(submitter.userEmail, workspaceRec.namespace)
           workflowOutputs <- gatherWorkflowOutputs(externalWorkflowIds, petUserInfo)
         } yield {
           workflowOutputs

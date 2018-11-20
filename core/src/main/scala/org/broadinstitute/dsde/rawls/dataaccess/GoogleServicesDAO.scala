@@ -1,11 +1,19 @@
 package org.broadinstitute.dsde.rawls.dataaccess
 
+import java.io.ByteArrayInputStream
+
 import akka.actor.ActorRef
 import com.google.api.client.auth.oauth2.Credential
+import com.google.api.services.admin.directory.DirectoryScopes
 import com.google.api.services.admin.directory.model.Group
 import com.google.api.services.cloudresourcemanager.model.Project
+import com.google.api.services.compute.ComputeScopes
+import com.google.api.services.genomics.GenomicsScopes
 import com.google.api.services.genomics.model.Operation
+import com.google.api.services.plus.PlusScopes
+import com.google.api.services.storage.StorageScopes
 import com.google.api.services.storage.model.{Bucket, BucketAccessControl}
+import com.google.auth.oauth2.ServiceAccountCredentials
 import org.broadinstitute.dsde.rawls.dataaccess.slick.RawlsBillingProjectOperationRecord
 import org.broadinstitute.dsde.rawls.model.WorkspaceAccessLevels._
 import org.broadinstitute.dsde.rawls.model._
@@ -13,6 +21,7 @@ import org.broadinstitute.dsde.workbench.model.WorkbenchEmail
 import org.joda.time.DateTime
 import spray.json.JsObject
 
+import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
@@ -243,7 +252,21 @@ abstract class GoogleServicesDAO(groupsPrefix: String) extends ErrorReportable {
   def removeRoleFromGroup(projectName: RawlsBillingProjectName, groupEmail: WorkbenchEmail, role: String): Future[Unit]
 
   def getAccessTokenUsingJson(saKey: String) : Future[String]
-  def getUserInfoUsingJson(saKey: String): Future[UserInfo]
+}
+
+object GoogleServicesDAO {
+  // modify these if we need more granular access in the future
+  val workbenchLoginScopes = Seq(PlusScopes.USERINFO_EMAIL, PlusScopes.USERINFO_PROFILE)
+  val storageScopes = Seq(StorageScopes.DEVSTORAGE_FULL_CONTROL, ComputeScopes.COMPUTE) ++ workbenchLoginScopes
+  val directoryScopes = Seq(DirectoryScopes.ADMIN_DIRECTORY_GROUP)
+  val genomicsScopes = Seq(GenomicsScopes.GENOMICS) // google requires GENOMICS, not just GENOMICS_READONLY, even though we're only doing reads
+  val billingScopes = Seq("https://www.googleapis.com/auth/cloud-billing")
+
+  def getUserInfoUsingJson(saKey: String): UserInfo = {
+    val keyStream = new ByteArrayInputStream(saKey.getBytes)
+    val credential = ServiceAccountCredentials.fromStream(keyStream).createScoped(storageScopes.asJava)
+    UserInfo.buildFromTokens(credential)
+  }
 }
 
 case class GoogleWorkspaceInfo(bucketName: String, accessGroupsByLevel: Map[WorkspaceAccessLevel, RawlsGroup], intersectionGroupsByLevel: Option[Map[WorkspaceAccessLevel, RawlsGroup]])
