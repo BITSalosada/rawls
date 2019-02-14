@@ -99,6 +99,8 @@ object Boot extends App with LazyLogging {
     val jsonFactory = JacksonFactory.getDefaultInstance
     val clientSecrets = GoogleClientSecrets.load(jsonFactory, new StringReader(gcsConfig.getString("secrets")))
     val clientEmail = gcsConfig.getString("serviceClientEmail")
+    val dmConfig = gcsConfig.getConfig("deploymentManager")
+
     val gcsDAO = new HttpGoogleServicesDAO(
       false,
       clientSecrets,
@@ -117,7 +119,8 @@ object Boot extends App with LazyLogging {
       gcsConfig.getString("billingEmail"),
       gcsConfig.getInt("bucketLogsMaxAge"),
       workbenchMetricBaseName = metricsPrefix,
-      proxyNamePrefix = gcsConfig.getStringOr("proxyNamePrefix", "")
+      proxyNamePrefix = gcsConfig.getStringOr("proxyNamePrefix", ""),
+      deploymentMgrProject = dmConfig.getString("projectID")
     )
 
     val pubSubDAO = new HttpGooglePubSubDAO(
@@ -169,7 +172,7 @@ object Boot extends App with LazyLogging {
     val notificationDAO = new PubSubNotificationDAO(pubSubDAO, gcsConfig.getString("notifications.topicName"))
     val marthaConfig = conf.getConfig("martha")
     val dosResolver = new MarthaDosResolver(marthaConfig.getString("baseUrl"))
-    val userServiceConstructor: (UserInfo) => UserService = UserService.constructor(slickDataSource, gcsDAO,  notificationDAO, samDAO, projectOwnerGrantableRoles, requesterPaysRole)
+    val userServiceConstructor: (UserInfo) => UserService = UserService.constructor(slickDataSource, gcsDAO,  notificationDAO, samDAO, projectOwnerGrantableRoles, requesterPaysRole, dmConfig)
     val genomicsServiceConstructor: (UserInfo) => GenomicsService = GenomicsService.constructor(slickDataSource, gcsDAO)
     val statisticsServiceConstructor: (UserInfo) => StatisticsService = StatisticsService.constructor(slickDataSource, gcsDAO)
     val submissionCostService: SubmissionCostService =
