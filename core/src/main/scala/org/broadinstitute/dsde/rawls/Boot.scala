@@ -172,7 +172,7 @@ object Boot extends App with LazyLogging {
     val notificationDAO = new PubSubNotificationDAO(pubSubDAO, gcsConfig.getString("notifications.topicName"))
     val marthaConfig = conf.getConfig("martha")
     val dosResolver = new MarthaDosResolver(marthaConfig.getString("baseUrl"))
-    val userServiceConstructor: (UserInfo) => UserService = UserService.constructor(slickDataSource, gcsDAO,  notificationDAO, samDAO, projectOwnerGrantableRoles, requesterPaysRole, dmConfig)
+    val userServiceConstructor: (UserInfo) => UserService = UserService.constructor(slickDataSource, gcsDAO,  notificationDAO, samDAO, projectOwnerGrantableRoles, requesterPaysRole, dmConfig, projectTemplate)
     val genomicsServiceConstructor: (UserInfo) => GenomicsService = GenomicsService.constructor(slickDataSource, gcsDAO)
     val statisticsServiceConstructor: (UserInfo) => StatisticsService = StatisticsService.constructor(slickDataSource, gcsDAO)
     val submissionCostService: SubmissionCostService =

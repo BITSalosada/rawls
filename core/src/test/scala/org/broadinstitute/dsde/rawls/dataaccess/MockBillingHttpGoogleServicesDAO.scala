@@ -49,7 +49,7 @@ class MockBillingHttpGoogleServicesDAO( useServiceAccountForBuckets: Boolean,
     billingPemFile,
     billingEmail,
     bucketLogsMaxAge,
-    workbenchMetricBaseName = "test", proxyNamePrefix = "")(system, materializer, executionContext) {
+    workbenchMetricBaseName = "test", proxyNamePrefix = "", deploymentMgrProject = "deployment-manager-project")(system, materializer, executionContext) {
 
   private var token: String = null
   private var tokenDate: DateTime = null
