@@ -6,6 +6,7 @@ import com.google.api.services.admin.directory.model.Group
 import com.google.api.services.cloudresourcemanager.model.Project
 import com.google.api.services.genomics.model.Operation
 import com.google.api.services.storage.model.{Bucket, BucketAccessControl, StorageObject}
+import com.typesafe.config.Config
 import org.broadinstitute.dsde.rawls.dataaccess.slick.RawlsBillingProjectOperationRecord
 import org.broadinstitute.dsde.rawls.model.WorkspaceAccessLevels._
 import org.broadinstitute.dsde.rawls.model._
@@ -13,6 +14,7 @@ import org.broadinstitute.dsde.workbench.model.WorkbenchEmail
 import org.broadinstitute.dsde.workbench.model.google.{GcsBucketName, GcsObjectName}
 import org.joda.time.DateTime
 import spray.json.JsObject
+import scala.collection.JavaConverters._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -219,3 +221,12 @@ abstract class GoogleServicesDAO(groupsPrefix: String) extends ErrorReportable {
 
 case class GoogleWorkspaceInfo(bucketName: String, policyGroupsByAccessLevel: Map[WorkspaceAccessLevel, WorkbenchEmail])
 case class ProjectTemplate(policies: Map[String, Seq[String]], services: Seq[String])
+
+case object ProjectTemplate {
+  def from(projectTemplateConfig: Config, requesterPaysRole: String): ProjectTemplate = {
+    val projectOwners = projectTemplateConfig.getStringList("owners")
+    val projectEditors = projectTemplateConfig.getStringList("editors")
+    val projectServices = projectTemplateConfig.getStringList("services")
+    ProjectTemplate(Map("roles/owner" -> projectOwners.asScala, "roles/editor" -> projectEditors.asScala), projectServices.asScala)
+  }
+}
