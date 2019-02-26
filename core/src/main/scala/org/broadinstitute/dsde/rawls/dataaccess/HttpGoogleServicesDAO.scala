@@ -1,7 +1,6 @@
 package org.broadinstitute.dsde.rawls.dataaccess
 
 import java.io._
-import java.util.UUID
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
@@ -74,6 +73,7 @@ class HttpGoogleServicesDAO(
   val billingEmail: String,
   bucketLogsMaxAge: Int,
   maxPageSize: Int = 200,
+  cromwellMetadataBucketOwner: String,
   override val workbenchMetricBaseName: String,
   proxyNamePrefix: String)(implicit val system: ActorSystem, val materializer: Materializer, implicit val executionContext: ExecutionContext ) extends GoogleServicesDAO(groupsPrefix) with FutureSupport with GoogleUtilities {
 
@@ -109,7 +109,6 @@ class HttpGoogleServicesDAO(
   protected def initBuckets(): Unit = {
     implicit val service = GoogleInstrumentedService.Storage
     val bucketAcls = List(new BucketAccessControl().setEntity("user-" + clientEmail).setRole("OWNER"))
-    val defaultObjectAcls = List(new ObjectAccessControl().setEntity("user-" + clientEmail).setRole("OWNER"))
 
     try {
       getStorage(getBucketServiceAccountCredential).buckets().get(tokenBucketName).executeUsingHead()
@@ -121,10 +120,11 @@ class HttpGoogleServicesDAO(
         executeGoogleRequest(logInserter)
         allowGoogleCloudStorageWrite(logBucket.getName)
 
+        val objectAcls = List(new ObjectAccessControl().setEntity("user-" + clientEmail).setRole("OWNER"))
         val tokenBucket = new Bucket().
           setName(tokenBucketName).
           setAcl(bucketAcls).
-          setDefaultObjectAcl(defaultObjectAcls).
+          setDefaultObjectAcl(objectAcls).
           setLogging(new Logging().setLogBucket(logBucket.getName))
         val insertTokenBucket = getStorage(getBucketServiceAccountCredential).buckets.insert(serviceProject, tokenBucket)
         executeGoogleRequest(insertTokenBucket)
@@ -134,10 +134,15 @@ class HttpGoogleServicesDAO(
       getStorage(getBucketServiceAccountCredential).buckets().get(cromwellMetadataBucketName.value).executeUsingHead()
     } catch {
       case t: HttpResponseException if t.getStatusCode == StatusCodes.NotFound.intValue =>
+        val objectAcls = List(
+          new ObjectAccessControl().setEntity("user-" + clientEmail).setRole("OWNER"),
+          new ObjectAccessControl().setEntity("user-" + clientEmail).setRole("OWNER")//TODO change this to hamm service account
+        )
+
         val metadataBucket = new Bucket().
           setName(cromwellMetadataBucketName.value).
           setAcl(bucketAcls).
-          setDefaultObjectAcl(defaultObjectAcls)
+          setDefaultObjectAcl(objectAcls)
         val insertMetadataBucket = getStorage(getBucketServiceAccountCredential).buckets.insert(serviceProject, metadataBucket)
         executeGoogleRequest(insertMetadataBucket)
     }

@@ -116,6 +116,7 @@ object Boot extends App with LazyLogging {
       gcsConfig.getString("pathToBillingPem"),
       gcsConfig.getString("billingEmail"),
       gcsConfig.getInt("bucketLogsMaxAge"),
+      cromwellMetadataBucketOwner = gcsConfig.getString("cromwellMetadataBucketOwner"), //TODO add this in config in firecloud-develop once we have hamm service account
       workbenchMetricBaseName = metricsPrefix,
       proxyNamePrefix = gcsConfig.getStringOr("proxyNamePrefix", "")
     )
