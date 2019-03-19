@@ -117,6 +117,7 @@ object Boot extends App with LazyLogging {
       gcsConfig.getString("billingPemEmail"),
       gcsConfig.getString("pathToBillingPem"),
       gcsConfig.getString("billingEmail"),
+      gcsConfig.getString("billingGroupEmail"),
       gcsConfig.getInt("bucketLogsMaxAge"),
       workbenchMetricBaseName = metricsPrefix,
       proxyNamePrefix = gcsConfig.getStringOr("proxyNamePrefix", ""),

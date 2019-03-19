@@ -30,6 +30,7 @@ class MockBillingHttpGoogleServicesDAO( useServiceAccountForBuckets: Boolean,
   billingPemEmail: String,
   billingPemFile: String,
   billingEmail: String,
+  billingGroupEmail: String,
   bucketLogsMaxAge: Int)
   (implicit override val system: ActorSystem, override val materializer: Materializer, override val executionContext: ExecutionContext)
   extends HttpGoogleServicesDAO(
@@ -48,6 +49,7 @@ class MockBillingHttpGoogleServicesDAO( useServiceAccountForBuckets: Boolean,
     billingPemEmail,
     billingPemFile,
     billingEmail,
+    billingGroupEmail,
     bucketLogsMaxAge,
     workbenchMetricBaseName = "test",
     proxyNamePrefix = "",
