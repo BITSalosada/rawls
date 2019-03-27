@@ -737,12 +737,7 @@ class HttpGoogleServicesDAO(
    * and then delete the deployment. There's a limit of 1000 deployments so this is important to do.
    */
   override def cleanupDMProject(projectName: RawlsBillingProjectName): Future[Unit] = {
-    implicit val service = GoogleInstrumentedService.DeploymentManager
-    val credential = getDeploymentManagerAccountCredential
-    val deploymentManager = getDeploymentManager(credential)
-
-    executeGoogleRqWithRetry(
-      deploymentManager.deployments().delete(deploymentMgrProject, projectToDM(projectName)).setDeletePolicy("ABANDON")).void
+    Future.successful(())
   }
 
   def projectToDM(projectName: RawlsBillingProjectName) = s"dm-${projectName.value}"
