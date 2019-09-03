@@ -593,6 +593,7 @@ trait EntityComponent {
     }
 
     def rename(workspaceContext: SlickWorkspaceContext, entityType: String, oldName: String, newName: String): ReadWriteAction[Int] = {
+      validateUserDefinedString(newName)
       workspaceQuery.updateLastModified(workspaceContext.workspaceId) andThen
         findEntityByName(workspaceContext.workspaceId, entityType, oldName).map(_.name).update(newName)
     }
