@@ -42,7 +42,11 @@ class MarthaDosResolver(url: String)(implicit val system: ActorSystem, val mater
 
     marthaResponse.map { resp =>
       //FIXME: can we make this return less gracefully, so the user is informed if no SA is returned?
-      resp.googleServiceAccount.flatMap(_.data.map(_.client_email))
+      val saEmail = resp.googleServiceAccount.flatMap(_.data.map(_.client_email))
+      if(saEmail.isEmpty){
+        println(s"SA email for $url came back empty, martha response was $resp, userInfo.userEmail was ${userInfo.userEmail}")
+      }
+      saEmail
     }
   }
 }

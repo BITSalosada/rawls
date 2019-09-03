@@ -241,6 +241,7 @@ trait WorkflowSubmission extends FutureSupport with LazyLogging with MethodWiths
   }
 
   private def resolveDosUriServiceAccounts(dosUris: Set[String], userInfo: UserInfo)(implicit executionContext: ExecutionContext): Future[Set[String]] = {
+    println(s"resolveDosUriServiceAccounts for $dosUris")
     Future.traverse(dosUris) { dosUri =>
       dosResolver.dosServiceAccountEmail(dosUri, userInfo)
     }.map { emails =>
