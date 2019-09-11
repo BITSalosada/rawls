@@ -9,6 +9,7 @@ EXPOSE 5050
 ENV GIT_MODEL_HASH $GIT_MODEL_HASH
 
 RUN mkdir /rawls
+RUN echo "hello rawls" > /rawls/db_test_file.txt
 COPY ./rawls*.jar /rawls
 
 # Add Rawls as a service (it will start when the container starts)
