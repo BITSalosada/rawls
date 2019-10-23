@@ -2021,7 +2021,8 @@ class WorkspaceService(protected val userInfo: UserInfo, val dataSource: SlickDa
         case None =>
           val workspaceId = UUID.randomUUID.toString
           val bucketName = getBucketName(workspaceId, workspaceRequest.authorizationDomain.exists(_.nonEmpty))
-          DBIO.from(samDAO.getPolicySyncStatus(SamResourceTypeNames.billingProject, workspaceRequest.namespace, SamBillingProjectPolicyNames.owner, userInfo).map(_.email)).flatMap { projectOwnerPolicyEmail =>
+
+          DBIO.successful(WorkbenchEmail("not-a-call-to-sam@test.firecloud.org")).flatMap { projectOwnerPolicyEmail =>
             saveNewWorkspace(workspaceId, workspaceRequest, bucketName, projectOwnerPolicyEmail, dataAccess).flatMap { case (savedWorkspace, policyMap) =>
               for {
                 //there's potential for another perf improvement here for workspaces with auth domains. if a workspace is in an auth domain, we'll already have
