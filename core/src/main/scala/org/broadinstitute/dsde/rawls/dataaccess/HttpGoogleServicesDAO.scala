@@ -66,7 +66,6 @@ import com.google.api.services.iam.v1.Iam
 import com.google.api.services.iamcredentials.v1.IAMCredentials
 import com.google.api.services.iamcredentials.v1.model.GenerateAccessTokenRequest
 import com.google.api.services.accesscontextmanager.v1beta.{AccessContextManager, AccessContextManagerScopes}
-import io.chrisdavenport.linebacker.Linebacker
 import io.chrisdavenport.log4cats.Logger
 import io.opencensus.trace.Span
 import org.broadinstitute.dsde.rawls.dataaccess.CloudResourceManagerV2Model.{Folder, FolderSearchResponse}
