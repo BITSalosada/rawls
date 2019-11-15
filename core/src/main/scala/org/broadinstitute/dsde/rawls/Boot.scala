@@ -17,6 +17,7 @@ import com.readytalk.metrics.{StatsDReporter, WorkbenchStatsD}
 import com.typesafe.config.{Config, ConfigFactory, ConfigObject}
 import com.typesafe.scalalogging.LazyLogging
 import io.chrisdavenport.log4cats.Logger
+import io.chrisdavenport.linebacker.Linebacker
 import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
 import net.ceedubs.ficus.Ficus._
 import org.broadinstitute.dsde.rawls.config._
@@ -468,8 +469,8 @@ object Boot extends IOApp with LazyLogging {
 
     for {
       blockingEc <- ExecutionContexts.fixedThreadPool[F](256) //scala.concurrent.blocking has default max extra thread number 256, so use this number to start with
-      blocker = Blocker.liftExecutionContext(blockingEc)
-      googleStorage <- GoogleStorageService.resource[F](pathToCredentialJson, blocker, None, Option(serviceProject))
+      lineBacker = Linebacker.fromExecutionContext[F](blockingEc)
+      googleStorage <- GoogleStorageService.resource[F](pathToCredentialJson, Some(serviceProject))(ContextShift[F], Timer[F], implicitly[Async[F]], Logger[F], lineBacker)
       httpClient <- BlazeClientBuilder(executionContext).resource
       googleServiceHttp <- GoogleServiceHttp.withRetryAndLogging(httpClient, metadataNotificationConfig)
       topicAdmin <- GoogleTopicAdmin.fromCredentialPath(pathToCredentialJson)
