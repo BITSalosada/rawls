@@ -38,6 +38,8 @@ class MockSamDAO(dataSource: SlickDataSource)(implicit executionContext: Executi
 
   override def userHasAction(resourceTypeName: SamResourceTypeName, resourceId: String, action: SamResourceAction, userInfo: UserInfo): Future[Boolean] = Future.successful(true)
 
+  override def getUserActionsForResource(resourceTypeName: SamResourceTypeName, resourceId: String, userInfo: UserInfo): Future[Set[SamResourceAction]] = Future.successful(Set.empty)
+
   override def getPolicy(resourceTypeName: SamResourceTypeName, resourceId: String, policyName: SamResourcePolicyName, userInfo: UserInfo): Future[SamPolicy] = Future.successful(SamPolicy(Set.empty, Set.empty, Set.empty))
 
   override def overwritePolicy(resourceTypeName: SamResourceTypeName, resourceId: String, policyName: SamResourcePolicyName, policy: SamPolicy, userInfo: UserInfo): Future[Unit] = Future.successful(())

@@ -169,6 +169,12 @@ class HttpSamDAO(baseSamServiceURL: String, serviceAccountCreds: Credential)(imp
     retry(when401or500) { () => pipeline[Boolean](userInfo) apply RequestBuilding.Get(url) }
   }
 
+  override def getUserActionsForResource(resourceTypeName: SamResourceTypeName, resourceId: String, userInfo: UserInfo): Future[Set[SamResourceAction]] = {
+    val url = samServiceURL + s"/api/resources/v1/${resourceTypeName.value}/$resourceId/actions"
+
+    retry(when401or500) { () => pipeline[Set[SamResourceAction]](userInfo) apply RequestBuilding.Get(url) }
+  }
+
   override def getPolicy(resourceTypeName: SamResourceTypeName, resourceId: String, policyName: SamResourcePolicyName, userInfo: UserInfo): Future[SamPolicy] = {
     val url = samServiceURL + s"/api/resources/v1/${resourceTypeName.value}/$resourceId/policies/${policyName.value.toLowerCase}"
     val httpRequest = RequestBuilding.Get(url)

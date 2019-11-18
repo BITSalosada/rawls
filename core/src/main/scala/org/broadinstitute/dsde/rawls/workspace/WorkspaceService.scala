@@ -223,19 +223,9 @@ class WorkspaceService(protected val userInfo: UserInfo, val dataSource: SlickDa
             } else {
               noFuture
             }
-            def canComputeFuture(): Future[Option[Boolean]] = if (options.contains("canCompute")) {
-              traceWithParent("getUserComputePermissions",s2)(_ =>  getUserComputePermissions(workspaceContext.workspaceId.toString, accessLevel).map(Option(_)))
-            } else {
-              noFuture
-            }
-            def canShareFuture(): Future[Option[Boolean]] = if (options.contains("canShare")) {
-              //convoluted but accessLevel for both params because user could at most share with their own access level
-              traceWithParent("getUserSharePermissions",s2)(_ =>  getUserSharePermissions(workspaceContext.workspaceId.toString, accessLevel, accessLevel).map(Option(_)))
-            } else {
-              noFuture
-            }
-            def catalogFuture(): Future[Option[Boolean]] = if (options.contains("catalog")) {
-              traceWithParent("getUserCatalogPermissions",s2)(_ =>  getUserCatalogPermissions(workspaceContext.workspaceId.toString).map(Option(_)))
+
+            def listActionsFuture(): Future[Option[Set[SamResourceAction]]] = if (options.contains("catalog") || options.contains("canCompute") || options.contains("canShare")) {
+              traceWithParent("getUserActionsForResource",s2)(_ => samDAO.getUserActionsForResource(SamResourceTypeNames.workspace, workspaceContext.workspaceId.toString, userInfo)).map(Option(_))
             } else {
               noFuture
             }
@@ -260,20 +250,27 @@ class WorkspaceService(protected val userInfo: UserInfo, val dataSource: SlickDa
 
             //run these futures in parallel. this is equivalent to running the for-comp with the futures already defined and running
             val futuresInParallel = (
-              catalogFuture(),
-              canShareFuture(),
-              canComputeFuture(),
+              listActionsFuture(),
               ownersFuture(),
               workspaceAuthorizationDomainFuture(),
               bucketOptionsFuture()
             ).tupled
 
             for {
-              (canCatalog, canShare, canCompute, owners, authDomain, bucketDetails) <- DBIO.from(futuresInParallel)
+              (listActions, owners, authDomain, bucketDetails) <- DBIO.from(futuresInParallel)
               stats <- traceDBIOWithParent("workspaceSubmissionStatsFuture", s2)( _ => workspaceSubmissionStatsFuture())
             } yield {
               // post-process JSON to remove calculated-but-undesired keys
-              val workspaceResponse = WorkspaceResponse(optionalAccessLevelForResponse, canShare, canCompute, canCatalog, WorkspaceDetails.fromWorkspaceAndOptions(workspaceContext.workspace, authDomain, attrSpecs.all || attrSpecs.attrsToSelect.nonEmpty), stats, bucketDetails, owners)
+              val workspaceResponse = WorkspaceResponse(
+                optionalAccessLevelForResponse,
+                listActions.map(_.contains(SamWorkspaceActions.sharePolicy(accessLevel.toString.toLowerCase()))),
+                listActions.map(_.contains(SamWorkspaceActions.compute)),
+                listActions.map(_.contains(SamWorkspaceActions.catalog)),
+                WorkspaceDetails.fromWorkspaceAndOptions(workspaceContext.workspace, authDomain, attrSpecs.all || attrSpecs.attrsToSelect.nonEmpty),
+                stats,
+                bucketDetails,
+                owners
+              )
               val filteredJson = deepFilterJsObject(workspaceResponse.toJson.asJsObject, options)
               RequestComplete(StatusCodes.OK, filteredJson)
             }
