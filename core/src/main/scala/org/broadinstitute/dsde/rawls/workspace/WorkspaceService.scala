@@ -987,6 +987,7 @@ class WorkspaceService(protected val userInfo: UserInfo, val dataSource: SlickDa
     }
 
   def batchUpdateEntities(workspaceName: WorkspaceName, entityUpdates: Seq[EntityUpdateDefinition], upsert: Boolean = false): Future[PerRequestMessage] = {
+    logger.info(s"Inside batchUpdateEntities workspaceName $workspaceName, with entities $entityUpdates with upsert $upsert")
     val namesToCheck = for {
       update <- entityUpdates
       operation <- update.operations
@@ -1003,6 +1004,7 @@ class WorkspaceService(protected val userInfo: UserInfo, val dataSource: SlickDa
                   Try(applyOperationsToEntity(e, entityUpdate.operations))
                 case None =>
                   if (upsert) {
+                    logger.info("NOTHING FOUND, UPSERTING INSTEAD")
                     Try(applyOperationsToEntity(Entity(entityUpdate.name, entityUpdate.entityType, Map.empty), entityUpdate.operations))
                   } else {
                     Failure(new RuntimeException("Entity does not exist"))
@@ -1011,7 +1013,10 @@ class WorkspaceService(protected val userInfo: UserInfo, val dataSource: SlickDa
             }
           }
 
+
+
           val saveAction = updateTrialsAction flatMap { updateTrials =>
+            logger.info("UPDATE TRIALS : " + updateTrials.toString)
             val errorReports = updateTrials.collect { case (entityUpdate, Failure(regrets)) =>
               ErrorReport(s"Could not update ${entityUpdate.entityType} ${entityUpdate.name}", ErrorReport(regrets))
             }
